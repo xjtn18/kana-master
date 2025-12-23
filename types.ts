@@ -20,6 +20,7 @@ export interface GameConfig {
   selectedGroups: string[]; // IDs of groups to include
   font: KanaFont;
   distribution: DistributionMode;
+  allowMultiScriptWords: boolean;
 }
 
 export interface QuestionResult {

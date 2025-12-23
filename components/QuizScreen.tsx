@@ -10,7 +10,7 @@ const ORANGE       = "FFC64F";
 
 interface QuizScreenProps {
   config: GameConfig;
-  onComplete: (results: QuestionResult[]) => void;
+  onComplete: (results: QuestionResult[], totalQuestions: number, completedCount: number) => void;
   onExit: () => void;
 }
 
@@ -96,21 +96,63 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
         const count = config.questionCount === 'all' ? 50 : config.questionCount; 
         const generatedQuestions: KanaChar[] = [];
 
+        // Determine word lengths
+        let lengths: number[] = [];
+        if (config.timeLimitSeconds !== null) {
+            // Fairness Logic: Equal distribution of 2, 3, 4 length words
+            const groups = Math.floor(count / 3);
+            const remainder = count % 3;
+            
+            // Add base groups of [2, 3, 4]
+            for (let i = 0; i < groups; i++) {
+                lengths.push(2, 3, 4);
+            }
+            // Fill remainder with 3 to keep average length exactly 3.0
+            for (let i = 0; i < remainder; i++) {
+                lengths.push(3);
+            }
+            
+            // Shuffle lengths to avoid predictable patterns
+            lengths.sort(() => Math.random() - 0.5);
+        } else {
+            // Random distribution for non-timed mode
+            for (let i = 0; i < count; i++) {
+                lengths.push(Math.floor(Math.random() * 3) + 2);
+            }
+        }
+
         for (let i = 0; i < count; i++) {
-            const length = Math.floor(Math.random() * 3) + 2;
+            const length = lengths[i];
             const selectedChars: KanaChar[] = [];
             
+            // If "allowMultiScriptWords" is false, we constrain the script based on the first char.
+            let scriptConstraint: 'hiragana' | 'katakana' | null = null;
+            
             for (let j = 0; j < length; j++) {
+                let validPool = pool;
+
+                // Enforce script consistency if configured
+                if (!config.allowMultiScriptWords && scriptConstraint) {
+                     validPool = pool.filter(c => c.type === scriptConstraint);
+                     // Fallback: If for some reason filtering yields empty (e.g. extremely restrictive custom group), use full pool.
+                     if (validPool.length === 0) validPool = pool;
+                }
+
                 let randomChar: KanaChar;
                 
                 if (config.distribution === 'frequency') {
-                    randomChar = getWeightedRandomItem(pool);
+                    randomChar = getWeightedRandomItem(validPool);
                 } else {
                     // Uniform random
-                    randomChar = pool[Math.floor(Math.random() * pool.length)];
+                    randomChar = validPool[Math.floor(Math.random() * validPool.length)];
                 }
                 
                 selectedChars.push(randomChar);
+
+                // Set constraint based on first character
+                if (j === 0) {
+                    scriptConstraint = randomChar.type;
+                }
             }
 
             const combinedChar = selectedChars.map(c => c.char).join('');
@@ -178,7 +220,8 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
   };
 
   const handleFinish = () => {
-    onComplete(results);
+    // If timer runs out, currentIndex represents the number of fully completed questions
+    onComplete(results, questions.length, currentIndex);
   };
 
   const nextQuestion = () => {
@@ -201,7 +244,8 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
     setResults(updatedResults);
 
     if (currentIndex + 1 >= questions.length) {
-      onComplete(updatedResults);
+      // Quiz finished naturally
+      onComplete(updatedResults, questions.length, questions.length);
     } else {
       setCurrentIndex((prev) => prev + 1);
       setStartTime(Date.now());
@@ -327,7 +371,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
     }
   };
 
-  if (!currentQuestion) return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading...</div>;
+  if (!currentQuestion) return <div className="min-h-screen flex items-center justify-center text-slate-500 dark:text-slate-400">Loading...</div>;
 
   const ANIMATION_CORRECT_DELAY_S = config.mode === "multi" ? 0.15 : 0;
   const NEXT_QUESTION_DELAY_MS = (config.timeLimitSeconds === null ? 500 : 300) + (ANIMATION_CORRECT_DELAY_S * 1000);
@@ -339,22 +383,22 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
     <div className="w-full max-w-2xl mx-auto p-4 flex flex-col items-center justify-center min-h-[80vh]">
       
       {/* Progress & Timer Bar */}
-      <div className="w-full flex justify-between items-center mb-12 text-slate-500 font-medium">
+      <div className="w-full flex justify-between items-center mb-12 text-slate-500 dark:text-slate-400 font-medium transition-colors">
         <div className="flex items-center space-x-4">
             <button
                 onClick={onExit}
-                className="p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+                className="p-2 -ml-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                 title="Exit Quiz"
             >
                 <X className="w-5 h-5" />
             </button>
-            <span className="bg-slate-200 px-3 py-1 rounded-full text-sm">
+            <span className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-full text-sm transition-colors">
                 {currentIndex + 1} / {questions.length}
             </span>
         </div>
         
         {config.timeLimitSeconds !== null && (
-          <div className={`flex items-center space-x-2 ${timeLeft && timeLeft < 10 ? 'text-rose-500 animate-pulse' : 'text-slate-500'}`}>
+          <div className={`flex items-center space-x-2 transition-colors ${timeLeft && timeLeft < 10 ? 'text-rose-500 animate-pulse' : 'text-slate-500 dark:text-slate-400'}`}>
             <Timer className="w-5 h-5" />
             <span className="tabular-nums text-lg font-bold">{timeLeft}s</span>
           </div>
@@ -389,12 +433,12 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                 animate={{ opacity: 1, scale: 1, rotateX: 0 }}
                 exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)', transition: { duration: 0.15 } }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="bg-white rounded-[3rem] shadow-2xl shadow-indigo-100 border border-slate-100 mb-10 min-h-[300px] relative"
+                className="bg-white dark:bg-slate-800 rounded-[3rem] shadow-2xl shadow-indigo-100 dark:shadow-slate-950/40 border border-slate-100 dark:border-slate-700 mb-10 min-h-[300px] relative transition-colors duration-300"
             >
                  {/* Decoration Container (Overflow Hidden) */}
                  <div className="absolute inset-0 overflow-hidden rounded-[3rem] pointer-events-none">
-                     <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
-                     <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-50 rounded-full opacity-50"></div>
+                     <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500 dark:bg-indigo-400"></div>
+                     <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-50 dark:bg-slate-900/10 rounded-full opacity-50"></div>
                  </div>
                  
                  {/* Content Container (No Overflow Hidden to allow Tooltip) */}
@@ -410,24 +454,24 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                             duration: 0.15,
                             delay: ANIMATION_CORRECT_DELAY_S,
                         }}
-                        className={`${getFontSize(currentQuestion.char)} ${fontClass} font-bold leading-none selection:bg-transparent flex justify-center tracking-wider gap-1`}
+                        className={`${getFontSize(currentQuestion.char)} ${fontClass} font-bold leading-none selection:bg-transparent flex justify-center tracking-wider gap-1 transition-colors`}
                     >
                         {currentQuestion.parts ? (
                             currentQuestion.parts.map((part, index) => {
-                                let colorClass = 'text-slate-800';
+                                let colorClass = 'text-slate-800 dark:text-slate-100';
                                 
                                 if (index < completedIndex) {
                                     // Completed parts are always Green
-                                    colorClass = `text-[#${GREEN}]`;
+                                    colorClass = `text-[#${GREEN}] dark:text-emerald-400`;
                                 } else if (index === completedIndex && config.autoCheck) {
                                     // Active part color logic (only for Auto mode)
                                     const isValidStart = part.romaji.some(r => r.startsWith(currentInput));
                                     
                                     if (isValidStart && currentInput.length > 0) {
                                         if (currentInput.length >= 2) {
-                                            colorClass = `text-[#${ORANGE_GREEN}]`;
+                                            colorClass = `text-[#${ORANGE_GREEN}] dark:text-lime-400`;
                                         } else {
-                                            colorClass = `text-[#${ORANGE}]`;
+                                            colorClass = `text-[#${ORANGE}] dark:text-amber-400`;
                                         }
                                     }
                                 }
@@ -447,7 +491,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                                             <motion.div
                                                 initial={{ opacity: 0, y: -20, scale: 0.5 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1.2 }}
-                                                className="absolute top-full mt-4 text-emerald-500/80 font-mono text-lg font-bold"
+                                                className="absolute top-full mt-4 text-emerald-500/80 dark:text-emerald-400/80 font-mono text-lg font-bold"
                                             >
                                                 {committedSegments[index]}
                                             </motion.div>
@@ -459,17 +503,17 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                                                 {/* Underscore Indicator */}
                                                 <motion.div
                                                     layoutId="active-kana-indicator"
-                                                    className="absolute left-0 right-0 mx-auto bg-indigo-300 rounded-full"
+                                                    className="absolute left-0 right-0 mx-auto bg-indigo-300 dark:bg-indigo-500 rounded-full"
                                                     style={{ bottom: '-0.25em', height: '0.08em', width: '80%' }}
                                                 />
 
                                                 {/* Floating Input Tooltip */}
                                                 <motion.div
                                                     layoutId="floating-input-tooltip"
-                                                    className={`absolute top-full mt-5 min-w-[3rem] px-4 py-2 rounded-xl flex items-center justify-center text-xl font-mono shadow-xl border-2 z-50 whitespace-nowrap
+                                                    className={`absolute top-full mt-5 min-w-[3rem] px-4 py-2 rounded-xl flex items-center justify-center text-xl font-mono shadow-xl border-2 z-50 whitespace-nowrap transition-colors duration-300
                                                         ${isError 
                                                             ? 'bg-rose-500 border-rose-400 text-white animate-shake' 
-                                                            : 'bg-slate-800 border-slate-700 text-white'
+                                                            : 'bg-slate-800 dark:bg-slate-700 border-slate-700 dark:border-slate-600 text-white'
                                                         }
                                                     `}
                                                     initial={(completedIndex === 0 && currentInput.length === 0) ? { opacity: 0, y: 10 } : false}
@@ -477,10 +521,10 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                                                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                                 >
                                                     {/* Arrow */}
-                                                    <div className={`absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-l-2 border-t-2
+                                                    <div className={`absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-l-2 border-t-2 transition-colors duration-300
                                                          ${isError 
                                                             ? 'bg-rose-500 border-rose-400' 
-                                                            : 'bg-slate-800 border-slate-700'
+                                                            : 'bg-slate-800 dark:bg-slate-700 border-slate-700 dark:border-slate-600'
                                                         }
                                                     `}></div>
                                                     
@@ -501,7 +545,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                                 );
                             })
                         ) : (
-                            <span className="text-slate-800">{currentQuestion.char}</span>
+                            <span className="text-slate-800 dark:text-slate-100">{currentQuestion.char}</span>
                         )}
                     </motion.div>
                  </div>
@@ -511,8 +555,8 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                     <AnimatePresence>
                         {isCorrect && (
                              <motion.div 
-                                initial={{ scale: 0, opacity: 0, rotate: 55, y: 10, x: -30 }}
-                                animate={{ scale: 1, opacity: 1, rotate: 0, y: -35 }}
+                                initial={{ scale: 0, opacity: 0, rotate: 45, y: 10 }}
+                                animate={{ scale: 1, opacity: 1, rotate: 0, y: 0 }}
                                 transition={{
                                     delay: 0.1,
                                     type: "spring",
@@ -520,7 +564,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                                     damping: 30,
                                 }}
                                 exit={{ scale: 0, opacity: 0 }}
-                                className="text-emerald-500 drop-shadow-xl"
+                                className="text-emerald-500 dark:text-emerald-400 drop-shadow-xl"
                              >
                                 <Check className="w-24 h-24" strokeWidth={4} />
                              </motion.div>
@@ -531,7 +575,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
         </AnimatePresence>
 
         {/* Hint Text Area */}
-        <div className="h-12 mt-4 text-center text-slate-400 text-sm font-medium">
+        <div className="h-12 mt-4 text-center text-slate-400 dark:text-slate-600 text-sm font-medium transition-colors">
              {!config.autoCheck && !isCorrect && (
                 <span className="animate-pulse">Type & Press Enter</span>
              )}

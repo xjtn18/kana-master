@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { GameConfig, KanaType, GameMode, KanaFont, DistributionMode } from '../types';
 import { KANA_GROUPS } from '../data/kana';
-import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3 } from 'lucide-react';
+import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ConfigScreenProps {
@@ -19,6 +19,7 @@ const DEFAULT_CONFIG = {
   selectedGroups: KANA_GROUPS.map(g => g.key), // Default all selected
   font: 'sans' as KanaFont,
   distribution: 'random' as DistributionMode,
+  allowMultiScriptWords: false,
 };
 
 const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
@@ -44,7 +45,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
             ...parsed, 
             selectedGroups: mergedGroups,
             font: parsed.font || DEFAULT_CONFIG.font,
-            distribution: parsed.distribution || DEFAULT_CONFIG.distribution
+            distribution: parsed.distribution || DEFAULT_CONFIG.distribution,
+            allowMultiScriptWords: parsed.allowMultiScriptWords !== undefined ? parsed.allowMultiScriptWords : DEFAULT_CONFIG.allowMultiScriptWords
         };
       }
     } catch (e) {
@@ -66,6 +68,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
   const [selectedGroups, setSelectedGroups] = useState<string[]>(initialConfig.selectedGroups || DEFAULT_CONFIG.selectedGroups);
   const [font, setFont] = useState<KanaFont>(initialConfig.font);
   const [distribution, setDistribution] = useState<DistributionMode>(initialConfig.distribution);
+  const [allowMultiScriptWords, setAllowMultiScriptWords] = useState<boolean>(initialConfig.allowMultiScriptWords);
 
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
   const [isFontsExpanded, setIsFontsExpanded] = useState(false);
@@ -89,10 +92,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       autoCheck,
       selectedGroups,
       font,
-      distribution
+      distribution,
+      allowMultiScriptWords
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(configToSave));
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution]);
+  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords]);
 
   const triggerStart = () => {
     if (selectedGroups.length === 0) return;
@@ -104,7 +108,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       autoCheck,
       selectedGroups,
       font,
-      distribution
+      distribution,
+      allowMultiScriptWords
     });
   };
 
@@ -123,7 +128,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution]);
+  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords]);
 
 
   // --- Scrollbar Logic ---
@@ -223,7 +228,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
         handleScroll();
     }, 50);
     return () => clearTimeout(t);
-  }, [activeTab, mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, isGroupsExpanded, isFontsExpanded, updateLayoutState, handleScroll]);
+  }, [activeTab, mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, isGroupsExpanded, isFontsExpanded, updateLayoutState, handleScroll]);
 
   // Reset scroll when tab changes
   useEffect(() => {
@@ -270,12 +275,12 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
   const transitionConfig = { type: "spring" as const, stiffness: 500, damping: 40 };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4">
+    <div className="w-full h-full flex items-center justify-center p-4 min-h-0">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="bg-white w-full max-w-lg rounded-3xl shadow-xl overflow-hidden border border-slate-100 flex flex-col h-full max-h-[800px]"
+        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col max-h-full transition-colors duration-300"
       >
         {/* Header - Fixed */}
         <div className="bg-indigo-600 p-6 md:p-8 text-center relative overflow-hidden flex-shrink-0">
@@ -285,33 +290,33 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
         </div>
 
         {/* Tabs - Fixed */}
-        <div className="flex border-b border-slate-100 relative z-10 bg-white flex-shrink-0">
+        <div className="flex border-b border-slate-100 dark:border-slate-700 relative z-10 bg-white dark:bg-slate-800 flex-shrink-0 transition-colors duration-300">
             <button
                 type="button"
                 onClick={() => setActiveTab('general')}
                 className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
-                    activeTab === 'general' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                    activeTab === 'general' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
             >
                 <span className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" /> General
                 </span>
                 {activeTab === 'general' && (
-                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600" transition={{ease: "easeOut", duration: 0.15}} />
+                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400" transition={{ease: "easeOut", duration: 0.15}} />
                 )}
             </button>
             <button
                 type="button"
                 onClick={() => setActiveTab('advanced')}
                 className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
-                    activeTab === 'advanced' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                    activeTab === 'advanced' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
             >
                  <span className="flex items-center justify-center gap-2">
                     <Sliders className="w-4 h-4" /> Advanced
                 </span>
                 {activeTab === 'advanced' && (
-                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600" transition={{ease: "easeOut", duration: 0.15}} />
+                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400" transition={{ease: "easeOut", duration: 0.15}} />
                 )}
             </button>
         </div>
@@ -356,15 +361,15 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                             >
                                 {/* Game Mode Selection */}
                                 <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <Zap className="w-4 h-4 mr-2" /> Game Mode
                                     </label>
-                                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
                                         <button
                                             type="button"
                                             onClick={() => setMode('single')}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            mode === 'single' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            mode === 'single' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                             }`}
                                         >
                                             Single Char
@@ -373,7 +378,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setMode('multi')}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            mode === 'multi' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            mode === 'multi' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                             }`}
                                         >
                                             Multi (Words)
@@ -383,7 +388,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
 
                                 {/* Character Set Selection */}
                                 <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <Settings className="w-4 h-4 mr-2" /> Character Set
                                     </label>
                                     <div className="grid grid-cols-3 gap-3">
@@ -394,8 +399,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             onClick={() => setKanaType(type)}
                                             className={`py-3 px-4 rounded-xl text-sm font-bold capitalize transition-all duration-200 border-2 ${
                                                 kanaType === type
-                                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm'
-                                                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-300'
+                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                             }`}
                                             >
                                             {type}
@@ -405,25 +410,25 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                 </div>
 
                                 {/* Group Filter Selection (Accordion) */}
-                                <div className={`border rounded-xl bg-slate-50 overflow-hidden transition-all ${
-                                    hasGroupError ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'
+                                <div className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${
+                                    hasGroupError ? 'border-rose-300 ring-2 ring-rose-100 dark:ring-rose-900/20' : 'border-slate-200 dark:border-slate-700'
                                 }`}>
                                     <button 
                                         type="button"
                                         onClick={() => setIsGroupsExpanded(!isGroupsExpanded)}
-                                        className="flex items-center justify-between w-full p-4 text-left focus:outline-none hover:bg-slate-100/50 transition-colors group"
+                                        className="flex items-center justify-between w-full p-4 text-left focus:outline-none hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors group"
                                     >
                                         <div className="flex items-center">
-                                            <Filter className={`w-4 h-4 mr-2 ${hasGroupError ? 'text-rose-500' : 'text-slate-500'}`} />
+                                            <Filter className={`w-4 h-4 mr-2 ${hasGroupError ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`} />
                                             <span className={`text-sm font-semibold uppercase tracking-wider transition-colors ${
-                                                hasGroupError ? 'text-rose-600' : 'text-slate-500 group-hover:text-slate-700'
+                                                hasGroupError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'
                                             }`}>
                                                 Kana Groups
                                             </span>
                                             <span className={`ml-3 text-xs font-medium px-2 py-0.5 rounded-full ${
                                                 hasGroupError 
-                                                ? 'bg-rose-100 text-rose-600' 
-                                                : 'bg-slate-200 text-slate-400'
+                                                ? 'bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400' 
+                                                : 'bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-400'
                                             }`}>
                                                 {getGroupLabel()}
                                             </span>
@@ -433,9 +438,9 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                                 <AlertCircle className="w-4 h-4 text-rose-500 mr-2 animate-pulse" />
                                             )}
                                             {isGroupsExpanded ? (
-                                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                                                <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                                             ) : (
-                                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                                                <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                                             )}
                                         </div>
                                     </button>
@@ -449,11 +454,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                                 className="overflow-hidden"
                                                 onAnimationComplete={updateLayoutState}
                                             >
-                                                <div className="p-4 pt-0 border-t border-slate-200/50 mt-2">
+                                                <div className="p-4 pt-0 border-t border-slate-200/50 dark:border-slate-600 mt-2">
                                                     <div className="flex space-x-2 text-xs font-bold mb-3 mt-4">
-                                                        <button type="button" onClick={selectAllGroups} className="text-indigo-600 hover:text-indigo-800">All</button>
-                                                        <span className="text-slate-300">|</span>
-                                                        <button type="button" onClick={deselectAllGroups} className="text-slate-400 hover:text-slate-600">None</button>
+                                                        <button type="button" onClick={selectAllGroups} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300">All</button>
+                                                        <span className="text-slate-300 dark:text-slate-600">|</span>
+                                                        <button type="button" onClick={deselectAllGroups} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">None</button>
                                                     </div>
                                                     
                                                     <div className="grid grid-cols-2 gap-2">
@@ -464,12 +469,12 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                                                 onClick={() => toggleGroup(group.key)}
                                                                 className={`text-xs py-2 px-3 rounded-lg font-bold text-left transition-colors flex items-center ${
                                                                     selectedGroups.includes(group.key)
-                                                                        ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-indigo-100'
-                                                                        : 'text-slate-400 hover:bg-slate-100'
+                                                                        ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-200 shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-900/50'
+                                                                        : 'text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                                                                 }`}
                                                             >
                                                                 <div className={`w-3 h-3 rounded-full mr-2 border flex-shrink-0 ${
-                                                                    selectedGroups.includes(group.key) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300'
+                                                                    selectedGroups.includes(group.key) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300 dark:border-slate-500'
                                                                 }`}></div>
                                                                 <span className="truncate">{group.label}</span>
                                                             </button>
@@ -486,7 +491,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
 
                                 {/* Number of Questions */}
                                 <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <List className="w-4 h-4 mr-2" /> Questions
                                     </label>
                                     <div className="grid grid-cols-4 gap-3">
@@ -497,8 +502,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             onClick={() => setQuestionCount(count)}
                                             className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
                                                 questionCount === count
-                                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                                                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-300'
+                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200'
+                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                             }`}
                                             >
                                             {count === 'all' ? 'All' : count}
@@ -509,7 +514,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
 
                                 {/* Time Limit */}
                                 <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <Clock className="w-4 h-4 mr-2" /> Time Limit
                                     </label>
                                     <div className="grid grid-cols-4 gap-3">
@@ -520,8 +525,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             onClick={() => setTimeLimit(time)}
                                             className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
                                                 timeLimit === time
-                                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                                                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-300'
+                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200'
+                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                             }`}
                                             >
                                             {time === null ? 'None' : `${time}s`}
@@ -531,28 +536,28 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                 </div>
 
                                 {/* Kana Font (Accordion) */}
-                                <div className={`border rounded-xl bg-slate-50 overflow-hidden transition-all ${
-                                    isFontsExpanded ? 'border-slate-300 ring-2 ring-indigo-50' : 'border-slate-200'
+                                <div className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${
+                                    isFontsExpanded ? 'border-slate-300 dark:border-slate-500 ring-2 ring-indigo-50 dark:ring-indigo-900/20' : 'border-slate-200 dark:border-slate-700'
                                 }`}>
                                     <button 
                                         type="button"
                                         onClick={() => setIsFontsExpanded(!isFontsExpanded)}
-                                        className="flex items-center justify-between w-full p-4 text-left focus:outline-none hover:bg-slate-100/50 transition-colors group"
+                                        className="flex items-center justify-between w-full p-4 text-left focus:outline-none hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors group"
                                     >
                                         <div className="flex items-center">
-                                            <Type className="w-4 h-4 mr-2 text-slate-500" />
-                                            <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-700 transition-colors">
+                                            <Type className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
+                                            <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
                                                 Kana Font
                                             </span>
-                                            <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-400">
+                                            <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-400">
                                                 {getFontLabel()}
                                             </span>
                                         </div>
                                         <div className="flex items-center">
                                             {isFontsExpanded ? (
-                                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                                                <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                                             ) : (
-                                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                                                <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                                             )}
                                         </div>
                                     </button>
@@ -566,7 +571,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                                 className="overflow-hidden"
                                                 onAnimationComplete={updateLayoutState}
                                             >
-                                                <div className="p-4 pt-0 border-t border-slate-200/50 mt-2">
+                                                <div className="p-4 pt-0 border-t border-slate-200/50 dark:border-slate-600 mt-2">
                                                     <div className="grid grid-cols-3 gap-2">
                                                         {fontOptions.map((fontOption) => (
                                                             <button
@@ -575,8 +580,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                                             onClick={() => setFont(fontOption.id as KanaFont)}
                                                             className={`py-3 px-1 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-center justify-center space-y-1 ${
                                                                 font === fontOption.id
-                                                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm'
-                                                                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-300'
+                                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 shadow-sm'
+                                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
                                                             }`}
                                                             >
                                                                 <span className="text-xs">{fontOption.label}</span>
@@ -606,15 +611,15 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                             >
                                 {/* Input Mode */}
                                 <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <CheckCircle2 className="w-4 h-4 mr-2" /> Validation Mode
                                     </label>
-                                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
                                         <button
                                             type="button"
                                             onClick={() => setAutoCheck(true)}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            autoCheck ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                             }`}
                                         >
                                             Auto (Instant)
@@ -623,13 +628,13 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setAutoCheck(false)}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            !autoCheck ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            !autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                             }`}
                                         >
                                             Manual (Enter)
                                         </button>
                                     </div>
-                                    <p className="text-xs text-slate-400 px-1">
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
                                         {autoCheck 
                                             ? "Checks your input immediately as you type." 
                                             : "Type your answer and press Enter to confirm."}
@@ -638,15 +643,15 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
 
                                 {/* Distribution Mode */}
                                 <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <BarChart3 className="w-4 h-4 mr-2" /> Distribution
                                     </label>
-                                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
                                         <button
                                             type="button"
                                             onClick={() => setDistribution('random')}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            distribution === 'random' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            distribution === 'random' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                             }`}
                                         >
                                             <span className="flex items-center justify-center gap-2">
@@ -657,7 +662,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setDistribution('frequency')}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            distribution === 'frequency' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            distribution === 'frequency' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                             }`}
                                         >
                                             <span className="flex items-center justify-center gap-2">
@@ -665,12 +670,51 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             </span>
                                         </button>
                                     </div>
-                                    <p className="text-xs text-slate-400 px-1">
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
                                         {distribution === 'random' 
                                             ? "All characters have an equal chance of appearing." 
                                             : "Common characters appear more frequently (based on corpus data)."}
                                     </p>
                                 </div>
+
+                                {/* Allow Multi-Script Words (Only for Multi Mode) */}
+                                {mode === 'multi' && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="space-y-4"
+                                    >
+                                        <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                            <Layers className="w-4 h-4 mr-2" /> Word Scripts
+                                        </label>
+                                        <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                                            <button
+                                                type="button"
+                                                onClick={() => setAllowMultiScriptWords(false)}
+                                                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                                                !allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                                }`}
+                                            >
+                                                Consistent (Single)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAllowMultiScriptWords(true)}
+                                                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                                                allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                                }`}
+                                            >
+                                                Mixed (Multi)
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
+                                            {allowMultiScriptWords 
+                                                ? "Words may contain a mix of Hiragana and Katakana." 
+                                                : "Words will be entirely Hiragana or entirely Katakana."}
+                                        </p>
+                                    </motion.div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -681,7 +725,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                     <div className="absolute right-1 top-1 bottom-1 w-1.5 z-50">
                         <div
                             ref={thumbRef}
-                            className="w-full bg-slate-300 rounded-full cursor-pointer hover:bg-slate-400 transition-colors"
+                            className="w-full bg-slate-300 dark:bg-slate-600 rounded-full cursor-pointer hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors"
                             style={{ 
                                 height: thumbHeight,
                                 position: 'absolute',
@@ -693,19 +737,19 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                 )}
                 
                 {/* Scroll Overflow Gradient */}
-                <div className={`absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white to-transparent pointer-events-none transition-opacity duration-300 z-10 ${showGradient && !isTransitioning ? 'opacity-100' : 'opacity-0'}`} />
+                <div className={`absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none transition-opacity duration-300 z-10 ${showGradient && !isTransitioning ? 'opacity-100' : 'opacity-0'}`} />
             </div>
 
             {/* Sticky Footer */}
-            <div className="p-6 md:p-8 border-t border-slate-50 z-20 bg-white flex-shrink-0">
+            <div className="p-6 md:p-8 border-t border-slate-50 dark:border-slate-700 z-20 bg-white dark:bg-slate-800 flex-shrink-0 transition-colors duration-300">
                 <motion.button
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={hasGroupError}
                     className={`w-full font-bold py-4 rounded-2xl shadow-lg transition-all transform flex items-center justify-center space-x-2 ${
                         hasGroupError 
-                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 hover:shadow-indigo-300'
+                        ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-500 cursor-not-allowed'
+                        : 'bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white shadow-indigo-200 dark:shadow-slate-900/50 hover:shadow-indigo-300 dark:hover:shadow-slate-900/80'
                     }`}
                 >
                     <Play className="w-5 h-5 fill-current" />

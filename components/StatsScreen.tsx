@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { QuestionResult, GameConfig } from '../types';
-import { RefreshCw, Trophy, XCircle, Clock, CheckCircle, Home, RotateCcw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Trophy, XCircle, Clock, CheckCircle, Home, RotateCcw, AlertTriangle, ListChecks } from 'lucide-react';
 import { motion } from 'framer-motion';
 import canvasConfetti from 'canvas-confetti';
 
@@ -9,37 +9,44 @@ interface StatsScreenProps {
   config: GameConfig;
   onRestart: () => void;
   onRetry: () => void;
+  totalQuestions: number;
+  completedQuestions: number;
 }
 
-const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, onRetry }) => {
+const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, onRetry, totalQuestions, completedQuestions }) => {
   
-  const totalQuestions = results.length;
+  const totalAttemptedKana = results.length;
   const perfectAnswers = results.filter(r => r.mistakes === 0).length;
   const totalMistakes = results.reduce((acc, curr) => acc + curr.mistakes, 0);
   const totalTimeMs = results.reduce((acc, curr) => acc + curr.timeTaken, 0);
-  const averageTime = totalTimeMs / totalQuestions;
+  const averageTime = totalAttemptedKana > 0 ? totalTimeMs / totalAttemptedKana : 0;
   
-  // Calculate grade
-  const accuracy = (perfectAnswers / totalQuestions) * 100;
+  // Rank and Completion Logic
+  const isTimedSession = config.timeLimitSeconds !== null;
+  const didFinish = completedQuestions === totalQuestions;
+  
+  const accuracy = totalAttemptedKana > 0 ? (perfectAnswers / totalAttemptedKana) * 100 : 0;
+  
   let grade = 'S';
-  let gradeColor = 'text-indigo-500';
-  if (accuracy < 100) { grade = 'A'; gradeColor = 'text-emerald-500'; }
-  if (accuracy < 80) { grade = 'B'; gradeColor = 'text-blue-500'; }
-  if (accuracy < 60) { grade = 'C'; gradeColor = 'text-yellow-500'; }
-  if (accuracy < 40) { grade = 'F'; gradeColor = 'text-rose-500'; }
+  let gradeColor = 'text-indigo-500 dark:text-indigo-400';
+
+  if (isTimedSession && !didFinish) {
+      grade = 'DNF';
+      gradeColor = 'text-slate-400 dark:text-slate-500';
+  } else {
+      if (accuracy < 100) { grade = 'A'; gradeColor = 'text-emerald-500 dark:text-emerald-400'; }
+      if (accuracy < 80) { grade = 'B'; gradeColor = 'text-blue-500 dark:text-blue-400'; }
+      if (accuracy < 60) { grade = 'C'; gradeColor = 'text-yellow-500 dark:text-yellow-400'; }
+      if (accuracy < 40) { grade = 'F'; gradeColor = 'text-rose-500 dark:text-rose-400'; }
+  }
 
   // Aggregate errors for the report. 
-  // We only count 1 mistake per question-kana instance to avoid skewing stats if user keysmashes.
   const errorResults = useMemo(() => {
     const map = new Map<string, QuestionResult>();
     
     results.forEach(r => {
         if (r.mistakes > 0) {
             const key = r.char.char;
-            
-            // For the error report, we consider "Did the user fail this char in this question?" 
-            // rather than "How many times did they fail". 
-            // So we add 1 to the mistake count if mistakes > 0.
             const errorIncrement = 1;
 
             if (map.has(key)) {
@@ -52,13 +59,12 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
             } else {
                 map.set(key, {
                     ...r,
-                    mistakes: errorIncrement // Initialize with 1 error for this occurrence
+                    mistakes: errorIncrement
                 });
             }
         }
     });
     
-    // Convert to array and sort by mistakes descending
     return Array.from(map.values()).sort((a, b) => b.mistakes - a.mistakes);
   }, [results]);
 
@@ -74,7 +80,8 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
   }, [config.font]);
 
   useEffect(() => {
-    if (accuracy > 80) {
+    // Only fire confetti if they finished and did well
+    if (didFinish && accuracy > 80) {
         const end = Date.now() + 1000;
         const colors = ['#6366f1', '#ec4899', '#10b981'];
     
@@ -99,7 +106,7 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
           }
         }());
     }
-  }, [accuracy]);
+  }, [accuracy, didFinish]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -116,95 +123,113 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
   }, [onRestart, onRetry]);
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 pb-20">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="text-center mb-12"
-      >
-        <h2 className="text-3xl font-black text-slate-800 mb-2">Session Complete!</h2>
-        <p className="text-slate-500">Here is how you performed</p>
-      </motion.div>
+    <div className="w-full h-full overflow-y-auto overflow-x-hidden">
+        <div className="max-w-4xl mx-auto p-6 pb-12">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center mb-12"
+            >
+                <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-2 transition-colors">Session Complete!</h2>
+                <p className="text-slate-500 dark:text-slate-400 transition-colors">
+                    {isTimedSession && !didFinish 
+                        ? "Time ran out before you could finish." 
+                        : "Excellent work on completing the session."}
+                </p>
+            </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        
-        {/* Grade Card */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center col-span-1 md:col-span-1">
-            <span className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Rank</span>
-            <span className={`text-6xl font-black ${gradeColor}`}>{grade}</span>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="md:col-span-3 grid grid-cols-3 gap-4">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-emerald-400 mb-3" />
-                <span className="text-2xl font-bold text-slate-800">{Math.round(accuracy)}%</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Accuracy</span>
-            </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center">
-                <XCircle className="w-8 h-8 text-rose-400 mb-3" />
-                <span className="text-2xl font-bold text-slate-800">{totalMistakes}</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mistakes</span>
-            </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center">
-                <Clock className="w-8 h-8 text-indigo-400 mb-3" />
-                <span className="text-2xl font-bold text-slate-800">{(averageTime / 1000).toFixed(1)}s</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Avg Pace</span>
-            </div>
-        </div>
-      </div>
-
-      {/* Error Report Breakdown */}
-      <div className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden mb-12">
-        <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="font-bold text-slate-700 flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2 text-rose-500" /> Error Report
-            </h3>
-            <span className="text-xs font-bold bg-slate-200 text-slate-500 px-2 py-1 rounded-full">
-                {errorResults.length} Items
-            </span>
-        </div>
-        <div className="p-6 min-h-[100px] flex items-center justify-center">
-            {errorResults.length === 0 ? (
-                <div className="text-center text-slate-400">
-                    <Trophy className="w-12 h-12 mx-auto mb-2 text-yellow-400" />
-                    <p className="font-bold">Perfect Score!</p>
-                    <p className="text-sm">No errors to report.</p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+                
+                {/* Grade Card */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center col-span-1 md:col-span-1 transition-colors duration-300">
+                    <span className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Rank</span>
+                    <span className={`font-black ${gradeColor} ${grade === 'DNF' ? 'text-4xl' : 'text-6xl'}`}>
+                        {grade}
+                    </span>
                 </div>
-            ) : (
-                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {errorResults.map((res, idx) => (
-                        <div key={idx} className="relative p-3 rounded-xl border-2 border-rose-100 bg-rose-50 flex flex-col items-center">
-                            <span className={`text-3xl mb-1 text-slate-800 ${fontClass}`}>{res.char.char}</span>
-                            <span className="text-xs font-bold uppercase text-slate-400">{res.char.romaji[0]}</span>
-                            <div className="absolute top-2 right-2 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                {res.mistakes}
-                            </div>
+
+                {/* Stats Grid */}
+                <div className="md:col-span-3 grid grid-cols-3 gap-4">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center transition-colors duration-300">
+                        {isTimedSession ? (
+                            <>
+                                <ListChecks className={`w-8 h-8 mb-3 ${didFinish ? 'text-indigo-400 dark:text-indigo-300' : 'text-slate-300 dark:text-slate-600'}`} />
+                                <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{completedQuestions} / {totalQuestions}</span>
+                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Completed</span>
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle className="w-8 h-8 text-emerald-400 dark:text-emerald-500 mb-3" />
+                                <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{Math.round(accuracy)}%</span>
+                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Accuracy</span>
+                            </>
+                        )}
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center transition-colors duration-300">
+                        <XCircle className="w-8 h-8 text-rose-400 dark:text-rose-500 mb-3" />
+                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{totalMistakes}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Mistakes</span>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center transition-colors duration-300">
+                        <Clock className="w-8 h-8 text-indigo-400 dark:text-indigo-300 mb-3" />
+                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{totalAttemptedKana > 0 ? (averageTime / 1000).toFixed(1) : "0"}s</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Avg Pace</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Error Report Breakdown */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden mb-12 transition-colors duration-300">
+                <div className="p-6 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                    <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                        <AlertTriangle className="w-5 h-5 mr-2 text-rose-500 dark:text-rose-400" /> Error Report
+                    </h3>
+                    <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-1 rounded-full">
+                        {errorResults.length} Items
+                    </span>
+                </div>
+                <div className="p-6 min-h-[100px] flex items-center justify-center">
+                    {errorResults.length === 0 ? (
+                        <div className="text-center text-slate-400 dark:text-slate-500">
+                            <Trophy className="w-12 h-12 mx-auto mb-2 text-yellow-400 dark:text-yellow-600" />
+                            <p className="font-bold">Perfect Score!</p>
+                            <p className="text-sm">No errors to report.</p>
                         </div>
-                    ))}
+                    ) : (
+                        <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {errorResults.map((res, idx) => (
+                                <div key={idx} className="relative p-3 rounded-xl border-2 border-rose-100 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-900/20 flex flex-col items-center">
+                                    <span className={`text-3xl mb-1 text-slate-800 dark:text-slate-100 ${fontClass}`}>{res.char.char}</span>
+                                    <span className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500">{res.char.romaji[0]}</span>
+                                    <div className="absolute top-2 right-2 w-5 h-5 bg-rose-500 dark:bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                        {res.mistakes}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col md:flex-row gap-4">
+                <button
+                    onClick={onRestart}
+                    className="flex-1 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-2 border-slate-200 dark:border-slate-700 font-bold py-4 rounded-2xl shadow-sm transition-all flex items-center justify-center space-x-2"
+                >
+                    <Home className="w-5 h-5" />
+                    <span>Home (Esc)</span>
+                </button>
+
+                <button
+                    onClick={onRetry}
+                    className="flex-1 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-slate-900/30 transition-all flex items-center justify-center space-x-2 transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                    <RotateCcw className="w-5 h-5" />
+                    <span>Redo (Tab)</span>
+                </button>
+            </div>
         </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <button
-            onClick={onRestart}
-            className="flex-1 bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-200 font-bold py-4 rounded-2xl shadow-sm transition-all flex items-center justify-center space-x-2"
-        >
-            <Home className="w-5 h-5" />
-            <span>Home (Esc)</span>
-        </button>
-
-        <button
-            onClick={onRetry}
-            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center space-x-2 transform hover:scale-[1.02] active:scale-[0.98]"
-        >
-            <RotateCcw className="w-5 h-5" />
-            <span>Redo (Tab)</span>
-        </button>
-      </div>
     </div>
   );
 };
