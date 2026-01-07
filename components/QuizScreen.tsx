@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { GameConfig, KanaChar, QuestionResult } from '../types';
+import { GameConfig, KanaChar, QuestionResult, DistributionMode } from '../types';
 import { getKanaPool, getWeightedRandomItem, getWeightedSubset, getUniformSubset } from '../data/kana';
 import { Timer, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,30 +59,53 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
     }
   }, [config.font]);
 
+  /**
+   * Helper to pick a character based on balanced script logic (Option B)
+   */
+  const pickCharacter = (hPool: KanaChar[], kPool: KanaChar[], distribution: DistributionMode): KanaChar | null => {
+    let poolToUse: KanaChar[];
+    
+    // Balanced "Coin Flip" - if both pools are available, pick one 50/50
+    if (hPool.length > 0 && kPool.length > 0) {
+        poolToUse = Math.random() < 0.5 ? hPool : kPool;
+    } else {
+        poolToUse = hPool.length > 0 ? hPool : kPool;
+    }
+
+    if (poolToUse.length === 0) return null;
+
+    if (distribution === 'frequency') {
+        return getWeightedRandomItem(poolToUse);
+    } else {
+        return poolToUse[Math.floor(Math.random() * poolToUse.length)];
+    }
+  };
+
   // Initialize Questions
   useEffect(() => {
-    const types: ('hiragana'|'katakana')[] = [];
-    if (config.kanaType === 'hiragana' || config.kanaType === 'mixed') types.push('hiragana');
-    if (config.kanaType === 'katakana' || config.kanaType === 'mixed') types.push('katakana');
-    
-    const pool = getKanaPool(types, config.selectedGroups);
+    const hPool = getKanaPool(['hiragana'], config.selectedGroups);
+    const kPool = getKanaPool(['katakana'], config.selectedGroups);
 
-    if (pool.length === 0) {
+    if (hPool.length === 0 && kPool.length === 0) {
         onExit(); 
         return;
     }
 
     if (config.mode === 'single') {
-        const sliceCount = config.questionCount === 'all' ? pool.length : config.questionCount;
-        
+        const sliceCount = config.questionCount === 'all' ? (hPool.length + kPool.length) : config.questionCount;
         let selectedQuestions: KanaChar[] = [];
 
-        if (config.distribution === 'frequency') {
-            // Weighted selection
-            selectedQuestions = getWeightedSubset(pool, sliceCount);
+        if (config.kanaType === 'mixed' && hPool.length > 0 && kPool.length > 0) {
+            // Option B for Single Mode: split the count between both scripts to ensure balance
+            const half = Math.ceil(sliceCount / 2);
+            const hSub = config.distribution === 'frequency' ? getWeightedSubset(hPool, half) : getUniformSubset(hPool, half);
+            const kSub = config.distribution === 'frequency' ? getWeightedSubset(kPool, sliceCount - hSub.length) : getUniformSubset(kPool, sliceCount - hSub.length);
+            selectedQuestions = [...hSub, ...kSub].sort(() => Math.random() - 0.5);
         } else {
-            // Random shuffle (Uniform)
-            selectedQuestions = getUniformSubset(pool, sliceCount);
+            const pool = [...hPool, ...kPool];
+            selectedQuestions = config.distribution === 'frequency' 
+                ? getWeightedSubset(pool, sliceCount) 
+                : getUniformSubset(pool, sliceCount);
         }
         
         const finalQuestions = selectedQuestions.map(q => ({
@@ -99,23 +122,12 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
         // Determine word lengths
         let lengths: number[] = [];
         if (config.timeLimitSeconds !== null) {
-            // Fairness Logic: Equal distribution of 2, 3, 4 length words
             const groups = Math.floor(count / 3);
             const remainder = count % 3;
-            
-            // Add base groups of [2, 3, 4]
-            for (let i = 0; i < groups; i++) {
-                lengths.push(2, 3, 4);
-            }
-            // Fill remainder with 3 to keep average length exactly 3.0
-            for (let i = 0; i < remainder; i++) {
-                lengths.push(3);
-            }
-            
-            // Shuffle lengths to avoid predictable patterns
+            for (let i = 0; i < groups; i++) lengths.push(2, 3, 4);
+            for (let i = 0; i < remainder; i++) lengths.push(3);
             lengths.sort(() => Math.random() - 0.5);
         } else {
-            // Random distribution for non-timed mode
             for (let i = 0; i < count; i++) {
                 lengths.push(Math.floor(Math.random() * 3) + 2);
             }
@@ -125,47 +137,34 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
             const length = lengths[i];
             const selectedChars: KanaChar[] = [];
             
-            // If "allowMultiScriptWords" is false, we constrain the script based on the first char.
-            let scriptConstraint: 'hiragana' | 'katakana' | null = null;
+            // Script constraint for "Consistent" words
+            let wordSpecificHPool = hPool;
+            let wordSpecificKPool = kPool;
             
-            for (let j = 0; j < length; j++) {
-                let validPool = pool;
-
-                // Enforce script consistency if configured
-                if (!config.allowMultiScriptWords && scriptConstraint) {
-                     validPool = pool.filter(c => c.type === scriptConstraint);
-                     // Fallback: If for some reason filtering yields empty (e.g. extremely restrictive custom group), use full pool.
-                     if (validPool.length === 0) validPool = pool;
-                }
-
-                let randomChar: KanaChar;
+            if (!config.allowMultiScriptWords) {
+                // For consistent words, flip the script coin once per word
+                const useHiragana = (hPool.length > 0 && kPool.length > 0) 
+                    ? Math.random() < 0.5 
+                    : hPool.length > 0;
                 
-                if (config.distribution === 'frequency') {
-                    randomChar = getWeightedRandomItem(validPool);
-                } else {
-                    // Uniform random
-                    randomChar = validPool[Math.floor(Math.random() * validPool.length)];
-                }
-                
-                selectedChars.push(randomChar);
-
-                // Set constraint based on first character
-                if (j === 0) {
-                    scriptConstraint = randomChar.type;
-                }
+                if (useHiragana) wordSpecificKPool = [];
+                else wordSpecificHPool = [];
             }
 
-            const combinedChar = selectedChars.map(c => c.char).join('');
-            const romajiArrays = selectedChars.map(c => c.romaji);
-            const combinedRomaji = cartesian(romajiArrays);
-            const type = selectedChars[0].type; 
+            for (let j = 0; j < length; j++) {
+                // If allowMultiScriptWords is true, the helper flips for every character
+                const char = pickCharacter(wordSpecificHPool, wordSpecificKPool, config.distribution);
+                if (char) selectedChars.push(char);
+            }
 
-            generatedQuestions.push({
-                char: combinedChar,
-                romaji: combinedRomaji,
-                type: type,
-                parts: selectedChars
-            });
+            if (selectedChars.length > 0) {
+                generatedQuestions.push({
+                    char: selectedChars.map(c => c.char).join(''),
+                    romaji: cartesian(selectedChars.map(c => c.romaji)),
+                    type: selectedChars[0].type,
+                    parts: selectedChars
+                });
+            }
         }
         setQuestions(generatedQuestions);
     }
