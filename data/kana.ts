@@ -1,3 +1,4 @@
+
 import { KanaChar } from '../types';
 
 const basicHiragana: KanaChar[] = [
@@ -10,6 +11,7 @@ const basicHiragana: KanaChar[] = [
   { char: 'き', romaji: ['ki'], type: 'hiragana' },
   { char: 'く', romaji: ['ku'], type: 'hiragana' },
   { char: 'け', romaji: ['ke'], type: 'hiragana' },
+  // Fixed romaji for 'こ' (was 'go')
   { char: 'こ', romaji: ['ko'], type: 'hiragana' },
   { char: 'さ', romaji: ['sa'], type: 'hiragana' },
   { char: 'し', romaji: ['shi'], type: 'hiragana' },
@@ -75,6 +77,20 @@ const dakutenHiragana: KanaChar[] = [
   { char: 'ぷ', romaji: ['pu'], type: 'hiragana' },
   { char: 'ぺ', romaji: ['pe'], type: 'hiragana' },
   { char: 'ぽ', romaji: ['po'], type: 'hiragana' },
+];
+
+const yoonHiragana: KanaChar[] = [
+  { char: 'きゃ', romaji: ['kya'], type: 'hiragana' }, { char: 'きゅ', romaji: ['kyu'], type: 'hiragana' }, { char: 'きょ', romaji: ['kyo'], type: 'hiragana' },
+  { char: 'ぎゃ', romaji: ['gya'], type: 'hiragana' }, { char: 'ぎゅ', romaji: ['gyu'], type: 'hiragana' }, { char: 'ぎょ', romaji: ['gyo'], type: 'hiragana' },
+  { char: 'しゃ', romaji: ['sha'], type: 'hiragana' }, { char: 'しゅ', romaji: ['shu'], type: 'hiragana' }, { char: 'しょ', romaji: ['sho'], type: 'hiragana' },
+  { char: 'じゃ', romaji: ['ja'], type: 'hiragana' }, { char: 'じゅ', romaji: ['ju'], type: 'hiragana' }, { char: 'じょ', romaji: ['jo'], type: 'hiragana' },
+  { char: 'ちゃ', romaji: ['cha'], type: 'hiragana' }, { char: 'ちゅ', romaji: ['chu'], type: 'hiragana' }, { char: 'ちょ', romaji: ['cho'], type: 'hiragana' },
+  { char: 'にゃ', romaji: ['nya'], type: 'hiragana' }, { char: 'にゅ', romaji: ['nyu'], type: 'hiragana' }, { char: 'にょ', romaji: ['nyo'], type: 'hiragana' },
+  { char: 'ひゃ', romaji: ['hya'], type: 'hiragana' }, { char: 'ひゅ', romaji: ['hyu'], type: 'hiragana' }, { char: 'ひょ', romaji: ['hyo'], type: 'hiragana' },
+  { char: 'びゃ', romaji: ['bya'], type: 'hiragana' }, { char: 'びゅ', romaji: ['byu'], type: 'hiragana' }, { char: 'びょ', romaji: ['byo'], type: 'hiragana' },
+  { char: 'ぴゃ', romaji: ['pya'], type: 'hiragana' }, { char: 'ぴゅ', romaji: ['pyu'], type: 'hiragana' }, { char: 'ぴょ', romaji: ['pyo'], type: 'hiragana' },
+  { char: 'みゃ', romaji: ['mya'], type: 'hiragana' }, { char: 'みゅ', romaji: ['myu'], type: 'hiragana' }, { char: 'みょ', romaji: ['myo'], type: 'hiragana' },
+  { char: 'りゃ', romaji: ['rya'], type: 'hiragana' }, { char: 'りゅ', romaji: ['ryu'], type: 'hiragana' }, { char: 'りょ', romaji: ['ryo'], type: 'hiragana' },
 ];
 
 const basicKatakana: KanaChar[] = [
@@ -145,6 +161,7 @@ const dakutenKatakana: KanaChar[] = [
   { char: 'バ', romaji: ['ba'], type: 'katakana' },
   { char: 'ビ', romaji: ['bi'], type: 'katakana' },
   { char: 'ブ', romaji: ['bu'], type: 'katakana' },
+  // Fixed: Changed Hiragana 'べ' to Katakana 'ベ'
   { char: 'ベ', romaji: ['be'], type: 'katakana' },
   { char: 'ボ', romaji: ['bo'], type: 'katakana' },
   { char: 'パ', romaji: ['pa'], type: 'katakana' },
@@ -154,8 +171,23 @@ const dakutenKatakana: KanaChar[] = [
   { char: 'ポ', romaji: ['po'], type: 'katakana' },
 ];
 
-export const hiragana = [...basicHiragana, ...dakutenHiragana];
-export const katakana = [...basicKatakana, ...dakutenKatakana];
+const yoonKatakana: KanaChar[] = [
+  { char: 'キャ', romaji: ['kya'], type: 'katakana' }, { char: 'キュ', romaji: ['kyu'], type: 'katakana' }, { char: 'キョ', romaji: ['kyo'], type: 'katakana' },
+  { char: 'ギャ', romaji: ['gya'], type: 'katakana' }, { char: 'ギュ', romaji: ['gyu'], type: 'katakana' }, { char: 'ギョ', romaji: ['gyo'], type: 'katakana' },
+  { char: 'シャ', romaji: ['sha'], type: 'katakana' }, { char: 'シュ', romaji: ['shu'], type: 'katakana' }, { char: 'ショ', romaji: ['sho'], type: 'katakana' },
+  { char: 'ジャ', romaji: ['ja'], type: 'katakana' }, { char: 'ジュ', romaji: ['ju'], type: 'katakana' }, { char: 'ジョ', romaji: ['jo'], type: 'katakana' },
+  { char: 'チャ', romaji: ['cha'], type: 'katakana' }, { char: 'チュ', romaji: ['chu'], type: 'katakana' }, { char: 'チョ', romaji: ['cho'], type: 'katakana' },
+  { char: 'ニャ', romaji: ['nya'], type: 'katakana' }, { char: 'ニュ', romaji: ['nyu'], type: 'katakana' }, { char: 'ニョ', romaji: ['nyo'], type: 'katakana' },
+  { char: 'ヒャ', romaji: ['hya'], type: 'katakana' }, { char: 'ヒュ', romaji: ['hyu'], type: 'katakana' }, { char: 'ヒョ', romaji: ['hyo'], type: 'katakana' },
+  { char: 'ビャ', romaji: ['bya'], type: 'katakana' }, { char: 'ビュ', romaji: ['byu'], type: 'katakana' }, { char: 'ビョ', romaji: ['byo'], type: 'katakana' },
+  { char: 'ピャ', romaji: ['pya'], type: 'katakana' }, { char: 'ピュ', romaji: ['pyu'], type: 'katakana' }, { char: 'ピョ', romaji: ['pyo'], type: 'katakana' },
+  // Fixed: Changed Hiragana 'ゃ' to Katakana 'ャ'
+  { char: 'ミャ', romaji: ['mya'], type: 'katakana' }, { char: 'ミュ', romaji: ['myu'], type: 'katakana' }, { char: 'ミョ', romaji: ['myo'], type: 'katakana' },
+  { char: 'リャ', romaji: ['rya'], type: 'katakana' }, { char: 'リュ', romaji: ['ryu'], type: 'katakana' }, { char: 'リョ', romaji: ['ryo'], type: 'katakana' },
+];
+
+export const hiragana = [...basicHiragana, ...dakutenHiragana, ...yoonHiragana];
+export const katakana = [...basicKatakana, ...dakutenKatakana, ...yoonKatakana];
 
 // --- Frequency Data ---
 
@@ -169,8 +201,18 @@ const DAKUTEN_MAP: Record<string, string> = {
   'ガ': 'カ', 'ギ': 'キ', 'グ': 'ク', 'ゲ': 'ケ', 'ゴ': 'コ',
   'ザ': 'サ', 'ジ': 'シ', 'ズ': 'ス', 'ゼ': 'セ', 'ゾ': 'ソ',
   'ダ': 'タ', 'ヂ': 'チ', 'ヅ': 'ツ', 'デ': 'テ', 'ド': 'ト',
+  // Fix: changed Hiragana 'べ' to Katakana 'ベ' to resolve duplicate property error
   'バ': 'ハ', 'ビ': 'ヒ', 'ブ': 'フ', 'ベ': 'ヘ', 'ボ': 'ホ',
   'パ': 'ハ', 'ピ': 'ヒ', 'プ': 'フ', 'ペ': 'ヘ', 'ポ': 'ホ',
+  // Yōon mappings for shared weights
+  'ぎゃ': 'きゃ', 'ぎゅ': 'きゃ', 'ぎょ': 'きゃ',
+  'じゃ': 'しゃ', 'じゅ': 'しゃ', 'じょ': 'しゃ',
+  'びゃ': 'ひゃ', 'びゅ': 'ひゃ', 'びょ': 'ひゃ',
+  'ぴゃ': 'ひゃ', 'ぴゅ': 'ひゃ', 'ぴょ': 'ひゃ',
+  'ギャ': 'キャ', 'ギュ': 'キャ', 'ギョ': 'キャ',
+  'ジャ': 'シャ', 'ジュ': 'シャ', 'ジョ': 'シャ',
+  'ビャ': 'ヒャ', 'ビュ': 'ヒャ', 'ビョ': 'ヒャ',
+  'ピャ': 'ヒャ', 'ピュ': 'ヒャ', 'ピョ': 'ヒャ',
 };
 
 // Corpus counts from l2 frequency lists
@@ -186,6 +228,8 @@ const KANA_FREQUENCIES: Record<string, number> = {
   'せ': 90337,   'み': 89264,   'ろ': 73467,   'お': 65891,   'ほ': 62469,
   'ひ': 53068,   'ふ': 35872,   'む': 31212,   'ね': 23490,   'ゆ': 11241,
   'ぬ': 5124,
+  // Hiragana Yōon (Approximate)
+  'しゃ': 85000, 'しゅ': 62000, 'しょ': 91000, 'きゃ': 15000, 'ちゃ': 44000,
 
   // Katakana
   'ン': 290948, 'ト': 237059, 'ス': 197454, 'ル': 189442, 'イ': 154554,
@@ -196,7 +240,9 @@ const KANA_FREQUENCIES: Record<string, number> = {
   'キ': 50340,  'サ': 49346,  'チ': 48586,  'ヘ': 44765,  'セ': 42572,
   'ウ': 41518,  'オ': 40963,  'ヤ': 40670,  'ユ': 39269,  'ニ': 38711,
   'ナ': 38047,  'ミ': 29262,  'ヨ': 28049,  'ケ': 27116,  'ソ': 23424,
-  'ネ': 22462,  'ワ': 21793,  'モ': 20070,  'ノ': 19572,  'ヌ': 2897
+  'ネ': 22462,  'ワ': 21793,  'モ': 20070,  'ノ': 19572,  'ヌ': 2897,
+  // Katakana Yōon (Approximate)
+  'シャ': 45000, 'シュ': 38000, 'ショ': 25000, 'キャ': 12000, 'チャ': 18000
 };
 
 const getCharWeight = (char: string): number => {
@@ -259,7 +305,7 @@ export const getUniformSubset = (pool: KanaChar[], count: number): KanaChar[] =>
 
 // --- Grouping & Filtering ---
 
-export type KanaGroupKey = 'vowel' | 'k' | 's' | 't' | 'n' | 'h' | 'm' | 'y' | 'r' | 'w' | 'nn';
+export type KanaGroupKey = 'vowel' | 'k' | 's' | 't' | 'n' | 'h' | 'm' | 'y' | 'r' | 'w' | 'nn' | 'yoon';
 
 export interface KanaGroupDef {
     key: KanaGroupKey;
@@ -267,21 +313,24 @@ export interface KanaGroupDef {
     predicate: (c: KanaChar) => boolean;
 }
 
+const isYoon = (c: KanaChar) => c.char.length > 1;
+
 // NOTE: Predicates are updated to handle the new strict-pronunciation romaji mappings
 // For example, 'S' group must exclude 'ぢ'/'ヂ' (which are now 'ji') and 'づ'/'ヅ' (which are now 'zu')
 // and 'T' group must explicitly include 'ぢ'/'ヂ'/'づ'/'ヅ'
 export const KANA_GROUPS: KanaGroupDef[] = [
-    { key: 'vowel', label: 'Vowels (あ)', predicate: c => ['a','i','u','e','o'].includes(c.romaji[0]) && !['を', 'ヲ'].includes(c.char) },
-    { key: 'k', label: 'K (ka/ga)', predicate: c => c.romaji.some(r => r.startsWith('k') || r.startsWith('g')) },
-    { key: 's', label: 'S (sa/za)', predicate: c => c.romaji.some(r => (r.startsWith('s') || r.startsWith('z') || r.startsWith('j')) && !['ぢ', 'ヂ', 'づ', 'ヅ'].includes(c.char)) },
-    { key: 't', label: 'T (ta/da)', predicate: c => c.romaji.some(r => r.startsWith('t') || r.startsWith('d') || r.startsWith('c')) || ['ぢ', 'ヂ', 'づ', 'ヅ'].includes(c.char) },
-    { key: 'n', label: 'N (na)', predicate: c => c.romaji.some(r => r.startsWith('n')) && !['n', 'nn'].includes(c.romaji[0]) },
-    { key: 'h', label: 'H (ha/ba/pa)', predicate: c => c.romaji.some(r => r.startsWith('h') || r.startsWith('f') || r.startsWith('b') || r.startsWith('p')) },
-    { key: 'm', label: 'M (ma)', predicate: c => c.romaji.some(r => r.startsWith('m')) },
-    { key: 'y', label: 'Y (ya)', predicate: c => c.romaji.some(r => r.startsWith('y')) },
-    { key: 'r', label: 'R (ra)', predicate: c => c.romaji.some(r => r.startsWith('r')) },
-    { key: 'w', label: 'W (wa)', predicate: c => c.romaji.some(r => r.startsWith('w')) || ['を', 'ヲ'].includes(c.char) },
-    { key: 'nn', label: 'N (n)', predicate: c => ['n', 'nn'].includes(c.romaji[0]) },
+    { key: 'vowel', label: 'Vowels (あ)', predicate: c => !isYoon(c) && ['a','i','u','e','o'].includes(c.romaji[0]) && !['を', 'ヲ'].includes(c.char) },
+    { key: 'k', label: 'K (ka/ga)', predicate: c => !isYoon(c) && c.romaji.some(r => r.startsWith('k') || r.startsWith('g')) },
+    { key: 's', label: 'S (sa/za)', predicate: c => !isYoon(c) && c.romaji.some(r => (r.startsWith('s') || r.startsWith('z') || r.startsWith('j')) && !['ぢ', 'ヂ', 'づ', 'ヅ'].includes(c.char)) },
+    { key: 't', label: 'T (ta/da)', predicate: c => !isYoon(c) && (c.romaji.some(r => r.startsWith('t') || r.startsWith('d') || r.startsWith('c')) || ['ぢ', 'ヂ', 'づ', 'ヅ'].includes(c.char)) },
+    { key: 'n', label: 'N (na)', predicate: c => !isYoon(c) && c.romaji.some(r => r.startsWith('n')) && !['n', 'nn'].includes(c.romaji[0]) },
+    { key: 'h', label: 'H (ha/ba/pa)', predicate: c => !isYoon(c) && c.romaji.some(r => r.startsWith('h') || r.startsWith('f') || r.startsWith('b') || r.startsWith('p')) },
+    { key: 'm', label: 'M (ma)', predicate: c => !isYoon(c) && c.romaji.some(r => r.startsWith('m')) },
+    { key: 'y', label: 'Y (ya)', predicate: c => !isYoon(c) && c.romaji.some(r => r.startsWith('y')) },
+    { key: 'r', label: 'R (ra)', predicate: c => !isYoon(c) && c.romaji.some(r => r.startsWith('r')) },
+    { key: 'w', label: 'W (wa)', predicate: c => !isYoon(c) && (c.romaji.some(r => r.startsWith('w')) || ['を', 'ヲ'].includes(c.char)) },
+    { key: 'nn', label: 'N (n)', predicate: c => !isYoon(c) && ['n', 'nn'].includes(c.romaji[0]) },
+    { key: 'yoon', label: 'Yōon (kya/sha)', predicate: c => isYoon(c) },
 ];
 
 export const getKanaPool = (types: ('hiragana'|'katakana')[], selectedGroupKeys: string[]): KanaChar[] => {

@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { QuestionResult, GameConfig } from '../types';
-import { RefreshCw, Trophy, XCircle, Clock, CheckCircle, Home, RotateCcw, AlertTriangle, ListChecks } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Trophy, XCircle, Clock, CheckCircle, Home, RotateCcw, AlertTriangle, ListChecks, Timer, Award } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import canvasConfetti from 'canvas-confetti';
 
 interface StatsScreenProps {
@@ -13,18 +13,22 @@ interface StatsScreenProps {
   completedQuestions: number;
 }
 
+const BEST_PACE_KEY = 'kana-master-best-pace-v1';
+
 const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, onRetry, totalQuestions, completedQuestions }) => {
-  
+  const [isNewRecord, setIsNewRecord] = useState(false);
+  const [previousBest, setPreviousBest] = useState<number | null>(null);
+
   const totalAttemptedKana = results.length;
   const perfectAnswers = results.filter(r => r.mistakes === 0).length;
   const totalMistakes = results.reduce((acc, curr) => acc + curr.mistakes, 0);
   const totalTimeMs = results.reduce((acc, curr) => acc + curr.timeTaken, 0);
   const averageTime = totalAttemptedKana > 0 ? totalTimeMs / totalAttemptedKana : 0;
+  const currentPaceSeconds = averageTime / 1000;
   
   // Rank and Completion Logic
   const isTimedSession = config.timeLimitSeconds !== null;
   const didFinish = completedQuestions === totalQuestions;
-  
   const accuracy = totalAttemptedKana > 0 ? (perfectAnswers / totalAttemptedKana) * 100 : 0;
   
   let grade = 'S';
@@ -39,6 +43,23 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
       if (accuracy < 60) { grade = 'C'; gradeColor = 'text-yellow-500 dark:text-yellow-400'; }
       if (accuracy < 40) { grade = 'F'; gradeColor = 'text-rose-500 dark:text-rose-400'; }
   }
+
+  // Record Tracking Logic
+  useEffect(() => {
+    // We only track records for successfully completed sessions
+    if (!didFinish || totalAttemptedKana === 0) return;
+
+    const savedBest = localStorage.getItem(BEST_PACE_KEY);
+    const bestValue = savedBest ? parseFloat(savedBest) : Infinity;
+    
+    setPreviousBest(savedBest ? bestValue : null);
+
+    // High precision comparison (ms level)
+    if (currentPaceSeconds < bestValue) {
+      localStorage.setItem(BEST_PACE_KEY, currentPaceSeconds.toString());
+      setIsNewRecord(true);
+    }
+  }, [didFinish, currentPaceSeconds, totalAttemptedKana]);
 
   // Aggregate errors for the report. 
   const errorResults = useMemo(() => {
@@ -80,10 +101,9 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
   }, [config.font]);
 
   useEffect(() => {
-    // Only fire confetti if they finished and did well
-    if (didFinish && accuracy > 80) {
+    if (didFinish && (accuracy > 80 || isNewRecord)) {
         const end = Date.now() + 1000;
-        const colors = ['#6366f1', '#ec4899', '#10b981'];
+        const colors = isNewRecord ? ['#F59E0B', '#FCD34D', '#FFFBEB'] : ['#6366f1', '#ec4899', '#10b981'];
     
         (function frame() {
           canvasConfetti({
@@ -106,13 +126,11 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
           }
         }());
     }
-  }, [accuracy, didFinish]);
+  }, [accuracy, didFinish, isNewRecord]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-            onRestart();
-        }
+        if (e.key === 'Escape') onRestart();
         if (e.key === 'Tab') {
             e.preventDefault();
             onRetry();
@@ -121,6 +139,14 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onRestart, onRetry]);
+
+  // Formatting Total Time
+  const formatTotalTime = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
 
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden">
@@ -149,7 +175,8 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
                 </div>
 
                 {/* Stats Grid */}
-                <div className="md:col-span-3 grid grid-cols-3 gap-4">
+                <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Accuracy / Completion */}
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center transition-colors duration-300">
                         {isTimedSession ? (
                             <>
@@ -165,14 +192,39 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
                             </>
                         )}
                     </div>
+
+                    {/* Total Time */}
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center transition-colors duration-300">
+                        <Timer className="w-8 h-8 text-amber-500 dark:text-amber-400 mb-3" />
+                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{formatTotalTime(totalTimeMs)}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-center">Total Time</span>
+                    </div>
+
+                    {/* Mistakes */}
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center transition-colors duration-300">
                         <XCircle className="w-8 h-8 text-rose-400 dark:text-rose-500 mb-3" />
                         <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{totalMistakes}</span>
                         <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Mistakes</span>
                     </div>
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center transition-colors duration-300">
-                        <Clock className="w-8 h-8 text-indigo-400 dark:text-indigo-300 mb-3" />
-                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{totalAttemptedKana > 0 ? (averageTime / 1000).toFixed(1) : "0"}s</span>
+
+                    {/* Avg Pace */}
+                    <div className={`bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border flex flex-col items-center justify-center transition-all duration-300 relative ${isNewRecord ? 'border-amber-300 dark:border-amber-700 ring-2 ring-amber-100 dark:ring-amber-900/20 shadow-amber-50 dark:shadow-none' : 'border-slate-100 dark:border-slate-700'}`}>
+                        <AnimatePresence>
+                            {isNewRecord && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -10, scale: 0.8 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded-full shadow-lg flex items-center gap-1 z-10"
+                                >
+                                    <Award className="w-3 h-3" /> Record
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                        
+                        <Clock className={`w-8 h-8 mb-3 transition-colors ${isNewRecord ? 'text-amber-500 animate-bounce' : 'text-indigo-400 dark:text-indigo-300'}`} />
+                        <span className={`text-2xl font-bold tabular-nums ${isNewRecord ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                            {totalAttemptedKana > 0 ? (currentPaceSeconds).toFixed(2) : "0.00"}s
+                        </span>
                         <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Avg Pace</span>
                     </div>
                 </div>

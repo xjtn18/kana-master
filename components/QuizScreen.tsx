@@ -9,9 +9,9 @@ const ORANGE_GREEN = "ADD164";
 const ORANGE       = "FFC64F";
 
 interface QuizScreenProps {
-  config: GameConfig;
   onComplete: (results: QuestionResult[], totalQuestions: number, completedCount: number) => void;
   onExit: () => void;
+  config: GameConfig;
 }
 
 const cartesian = (arrays: string[][]): string[] => {
@@ -58,6 +58,8 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
         default: return 'font-jp';
     }
   }, [config.font]);
+
+  const isYoon = (c: KanaChar) => c.char.length > 1;
 
   /**
    * Helper to pick a character based on balanced script logic (Option B)
@@ -151,10 +153,22 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                 else wordSpecificHPool = [];
             }
 
+            let hasYoonInWord = false;
             for (let j = 0; j < length; j++) {
-                // If allowMultiScriptWords is true, the helper flips for every character
-                const char = pickCharacter(wordSpecificHPool, wordSpecificKPool, config.distribution);
-                if (char) selectedChars.push(char);
+                let currentHPool = wordSpecificHPool;
+                let currentKPool = wordSpecificKPool;
+
+                // Constraint: Max 1 yoon per word in multi-mode
+                if (hasYoonInWord) {
+                    currentHPool = currentHPool.filter(c => !isYoon(c));
+                    currentKPool = currentKPool.filter(c => !isYoon(c));
+                }
+
+                const char = pickCharacter(currentHPool, currentKPool, config.distribution);
+                if (char) {
+                    selectedChars.push(char);
+                    if (isYoon(char)) hasYoonInWord = true;
+                }
             }
 
             if (selectedChars.length > 0) {
@@ -211,10 +225,14 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
 
   const currentQuestion = questions[currentIndex];
 
-  const getFontSize = (text: string) => {
+  /**
+   * Font size should be calculated based on semantic parts rather than string length.
+   * Yōon (2 chars) shouldn't make the font as small as 2 separate syllables.
+   */
+  const getFontSize = (partsCount: number) => {
     const base = 5;        
-    const drop = 0.35;      
-    const size = Math.max(3, base - (text.length - 1) * drop);
+    const drop = 0.45;      
+    const size = Math.max(2.8, base - (partsCount - 1) * drop);
     return `text-[${size}rem]`;
   };
 
@@ -453,7 +471,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                             duration: 0.15,
                             delay: ANIMATION_CORRECT_DELAY_S,
                         }}
-                        className={`${getFontSize(currentQuestion.char)} ${fontClass} font-bold leading-none selection:bg-transparent flex justify-center tracking-wider gap-1 transition-colors`}
+                        className={`${getFontSize(currentQuestion.parts?.length || 1)} ${fontClass} font-bold leading-none selection:bg-transparent flex flex-nowrap justify-center tracking-wider gap-1 transition-colors`}
                     >
                         {currentQuestion.parts ? (
                             currentQuestion.parts.map((part, index) => {
@@ -481,7 +499,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                                 return (
                                     <span 
                                         key={index}
-                                        className={`transition-colors duration-200 ${colorClass} relative flex flex-col items-center px-[0.05em]`}
+                                        className={`transition-colors duration-200 ${colorClass} relative flex flex-col items-center px-[0.05em] whitespace-nowrap`}
                                     >
                                         {part.char}
                                         
@@ -544,7 +562,7 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                                 );
                             })
                         ) : (
-                            <span className="text-slate-800 dark:text-slate-100">{currentQuestion.char}</span>
+                            <span className="text-slate-800 dark:text-slate-100 whitespace-nowrap">{currentQuestion.char}</span>
                         )}
                     </motion.div>
                  </div>
