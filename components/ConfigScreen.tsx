@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { GameConfig, KanaType, GameMode, KanaFont, DistributionMode } from '../types';
 import { KANA_GROUPS } from '../data/kana';
-import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers } from 'lucide-react';
+import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ConfigScreenProps {
   onStart: (config: GameConfig) => void;
 }
 
-const STORAGE_KEY = 'kana-master-config-v5'; 
+const STORAGE_KEY = 'kana-master-config-v6'; 
 
 const DEFAULT_CONFIG = {
   mode: 'multi' as GameMode,
@@ -20,6 +20,7 @@ const DEFAULT_CONFIG = {
   font: 'sans' as KanaFont,
   distribution: 'random' as DistributionMode,
   allowMultiScriptWords: false,
+  redoOnError: false,
 };
 
 const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
@@ -46,7 +47,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
             selectedGroups: mergedGroups,
             font: parsed.font || DEFAULT_CONFIG.font,
             distribution: parsed.distribution || DEFAULT_CONFIG.distribution,
-            allowMultiScriptWords: parsed.allowMultiScriptWords !== undefined ? parsed.allowMultiScriptWords : DEFAULT_CONFIG.allowMultiScriptWords
+            allowMultiScriptWords: parsed.allowMultiScriptWords !== undefined ? parsed.allowMultiScriptWords : DEFAULT_CONFIG.allowMultiScriptWords,
+            redoOnError: parsed.redoOnError !== undefined ? parsed.redoOnError : DEFAULT_CONFIG.redoOnError
         };
       }
     } catch (e) {
@@ -69,6 +71,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
   const [font, setFont] = useState<KanaFont>(initialConfig.font);
   const [distribution, setDistribution] = useState<DistributionMode>(initialConfig.distribution);
   const [allowMultiScriptWords, setAllowMultiScriptWords] = useState<boolean>(initialConfig.allowMultiScriptWords);
+  const [redoOnError, setRedoOnError] = useState<boolean>(initialConfig.redoOnError);
 
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
   const [isFontsExpanded, setIsFontsExpanded] = useState(false);
@@ -93,10 +96,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       selectedGroups,
       font,
       distribution,
-      allowMultiScriptWords
+      allowMultiScriptWords,
+      redoOnError
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(configToSave));
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords]);
+  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError]);
 
   const triggerStart = () => {
     if (selectedGroups.length === 0) return;
@@ -109,7 +113,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       selectedGroups,
       font,
       distribution,
-      allowMultiScriptWords
+      allowMultiScriptWords,
+      redoOnError
     });
   };
 
@@ -128,7 +133,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords]);
+  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError]);
 
 
   // --- Scrollbar Logic ---
@@ -154,7 +159,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
   }, []);
 
   // 2. Update Position (Transform) & Gradient - Triggered by Scroll Event
-  // Uses direct DOM manipulation for the thumb to ensure 0 lag (snappy feel)
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
@@ -228,7 +232,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
         handleScroll();
     }, 50);
     return () => clearTimeout(t);
-  }, [activeTab, mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, isGroupsExpanded, isFontsExpanded, updateLayoutState, handleScroll]);
+  }, [activeTab, mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, isGroupsExpanded, isFontsExpanded, updateLayoutState, handleScroll]);
 
   // Reset scroll when tab changes
   useEffect(() => {
@@ -329,15 +333,13 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                 <div 
                     ref={scrollRef}
                     className={`flex-1 overflow-x-hidden p-6 md:p-8 relative no-scrollbar ${
-                        /* Allow scrolling during transition ONLY if targeting General tab (Short -> Tall) to prevent snap */
                         (isTransitioning && activeTab !== 'general') ? 'overflow-hidden' : 'overflow-y-auto'
                     }`}
                     style={{ 
-                        scrollbarWidth: 'none',  /* Firefox */
-                        msOverflowStyle: 'none'  /* IE 10+ */
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none'
                     }}
                 >
-                    {/* Inject generic hide scrollbar style for Webkit */}
                     <style>{`
                         .no-scrollbar::-webkit-scrollbar {
                             display: none;
@@ -355,7 +357,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                 onAnimationStart={() => setIsTransitioning(true)}
                                 onAnimationComplete={() => {
                                     setIsTransitioning(false);
-                                    setTimeout(updateLayoutState, 0); // Check layout immediately after update
+                                    setTimeout(updateLayoutState, 0);
                                 }}
                                 className="flex flex-col gap-8 pb-4"
                             >
@@ -605,7 +607,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                 onAnimationStart={() => setIsTransitioning(true)}
                                 onAnimationComplete={() => {
                                     setIsTransitioning(false);
-                                    setTimeout(updateLayoutState, 0); // Check layout immediately after update
+                                    setTimeout(updateLayoutState, 0);
                                 }}
                                 className="flex flex-col gap-8 pb-4"
                             >
@@ -638,6 +640,38 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                         {autoCheck 
                                             ? "Checks your input immediately as you type." 
                                             : "Type your answer and press Enter to confirm."}
+                                    </p>
+                                </div>
+
+                                {/* Redo on Error Mode */}
+                                <div className="space-y-4">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        <RotateCcw className="w-4 h-4 mr-2" /> Mastery Mode
+                                    </label>
+                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRedoOnError(false)}
+                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                                            !redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            }`}
+                                        >
+                                            Standard
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRedoOnError(true)}
+                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                                            redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            }`}
+                                        >
+                                            Redo on Error
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
+                                        {redoOnError 
+                                            ? "Mistakes force you to restart the current word from the beginning." 
+                                            : "Continue typing after a mistake is recorded."}
                                     </p>
                                 </div>
 
@@ -720,7 +754,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                     </AnimatePresence>
                 </div>
                 
-                {/* Custom Overlay Scrollbar */}
                 {isScrollable && !isTransitioning && (
                     <div className="absolute right-1 top-1 bottom-1 w-1.5 z-50">
                         <div
@@ -730,13 +763,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                 height: thumbHeight,
                                 position: 'absolute',
                                 top: 0,
-                                // Transform is updated imperatively for performance
                             }}
                         />
                     </div>
                 )}
                 
-                {/* Scroll Overflow Gradient */}
                 <div className={`absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none transition-opacity duration-300 z-10 ${showGradient && !isTransitioning ? 'opacity-100' : 'opacity-0'}`} />
             </div>
 

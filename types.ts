@@ -1,4 +1,3 @@
-
 export type KanaType = 'hiragana' | 'katakana' | 'mixed';
 export type GameMode = 'single' | 'multi';
 export type KanaFont = 'sans' | 'serif' | 'rounded' | 'hand' | 'digital' | 'future';
@@ -21,6 +20,7 @@ export interface GameConfig {
   font: KanaFont;
   distribution: DistributionMode;
   allowMultiScriptWords: boolean;
+  redoOnError: boolean;
 }
 
 export interface QuestionResult {

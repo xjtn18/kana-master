@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GameConfig, KanaChar, QuestionResult, DistributionMode } from '../types';
 import { getKanaPool, getWeightedRandomItem, getWeightedSubset, getUniformSubset } from '../data/kana';
-import { Timer, X, Check } from 'lucide-react';
+import { Timer, X, Check, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GREEN        = "3FB061";
@@ -83,6 +83,60 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
     }
   };
 
+  /**
+   * Biased sampler for single mode to respect the ~25% yoon frequency request
+   */
+  const getBiasedSample = (hPool: KanaChar[], kPool: KanaChar[], count: number, distribution: DistributionMode): KanaChar[] => {
+      const results: KanaChar[] = [];
+      const hYoon = hPool.filter(isYoon);
+      const hBasic = hPool.filter(c => !isYoon(c));
+      const kYoon = kPool.filter(isYoon);
+      const kBasic = kPool.filter(c => !isYoon(c));
+
+      for (let i = 0; i < count; i++) {
+          // Determine script pool first
+          let currentHPool: KanaChar[] = [];
+          let currentKPool: KanaChar[] = [];
+
+          const hasY = hYoon.length > 0 || kYoon.length > 0;
+          const hasB = hBasic.length > 0 || kBasic.length > 0;
+
+          // Only apply 25% bias if both yoon and basic options are actually available
+          const allowYoon = hasY && (!hasB || Math.random() < 0.25);
+
+          if (allowYoon) {
+              currentHPool = hYoon;
+              currentKPool = kYoon;
+          } else {
+              currentHPool = hBasic;
+              currentKPool = kBasic;
+          }
+
+          const selected = pickCharacter(currentHPool, currentKPool, distribution);
+          if (selected) {
+              results.push(selected);
+              // Remove selected from source pools (sampling without replacement)
+              [hYoon, hBasic, kYoon, kBasic].forEach(p => {
+                  const idx = p.indexOf(selected);
+                  if (idx > -1) p.splice(idx, 1);
+              });
+          } else {
+              // If we couldn't pick the preferred type (maybe preferred pool ran out), try picking anything left
+              const fallback = pickCharacter([...hYoon, ...hBasic], [...kYoon, ...kBasic], distribution);
+              if (fallback) {
+                  results.push(fallback);
+                  [hYoon, hBasic, kYoon, kBasic].forEach(p => {
+                      const idx = p.indexOf(fallback);
+                      if (idx > -1) p.splice(idx, 1);
+                  });
+              } else {
+                  break;
+              }
+          }
+      }
+      return results;
+  };
+
   // Initialize Questions
   useEffect(() => {
     const hPool = getKanaPool(['hiragana'], config.selectedGroups);
@@ -97,17 +151,10 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
         const sliceCount = config.questionCount === 'all' ? (hPool.length + kPool.length) : config.questionCount;
         let selectedQuestions: KanaChar[] = [];
 
-        if (config.kanaType === 'mixed' && hPool.length > 0 && kPool.length > 0) {
-            // Option B for Single Mode: split the count between both scripts to ensure balance
-            const half = Math.ceil(sliceCount / 2);
-            const hSub = config.distribution === 'frequency' ? getWeightedSubset(hPool, half) : getUniformSubset(hPool, half);
-            const kSub = config.distribution === 'frequency' ? getWeightedSubset(kPool, sliceCount - hSub.length) : getUniformSubset(kPool, sliceCount - hSub.length);
-            selectedQuestions = [...hSub, ...kSub].sort(() => Math.random() - 0.5);
+        if (config.questionCount === 'all') {
+            selectedQuestions = [...hPool, ...kPool].sort(() => Math.random() - 0.5);
         } else {
-            const pool = [...hPool, ...kPool];
-            selectedQuestions = config.distribution === 'frequency' 
-                ? getWeightedSubset(pool, sliceCount) 
-                : getUniformSubset(pool, sliceCount);
+            selectedQuestions = getBiasedSample(hPool, kPool, sliceCount, config.distribution);
         }
         
         const finalQuestions = selectedQuestions.map(q => ({
@@ -158,10 +205,20 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                 let currentHPool = wordSpecificHPool;
                 let currentKPool = wordSpecificKPool;
 
-                // Constraint: Max 1 yoon per word in multi-mode
+                // Constraint 1: Max 1 yoon per word in multi-mode
                 if (hasYoonInWord) {
                     currentHPool = currentHPool.filter(c => !isYoon(c));
                     currentKPool = currentKPool.filter(c => !isYoon(c));
+                } else {
+                    // Constraint 2: 25% frequency bias for yoon if non-yoon are available
+                    const allAvailable = [...currentHPool, ...currentKPool];
+                    const hasBasic = allAvailable.some(c => !isYoon(c));
+                    const hasYoon = allAvailable.some(isYoon);
+
+                    if (hasBasic && hasYoon && Math.random() > 0.25) {
+                        currentHPool = currentHPool.filter(c => !isYoon(c));
+                        currentKPool = currentKPool.filter(c => !isYoon(c));
+                    }
                 }
 
                 const char = pickCharacter(currentHPool, currentKPool, config.distribution);
@@ -298,6 +355,13 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
 
     setIsError(false);
     
+    // Logic for redoOnError: reset progress for the current question
+    if (config.redoOnError) {
+        setCompletedIndex(0);
+        setCurrentInput('');
+        setCommittedSegments([]);
+    }
+
     // Tiny delay to restart animation
     setTimeout(() => {
         setIsError(true);
@@ -383,7 +447,8 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
         handlePartCompletion(currentInput);
       } else {
         triggerError(completedIndex);
-        setCurrentInput(''); // Clear buffer on error
+        // We don't necessarily clear input here if redoOnError is off, but standard trainer behavior usually clears it
+        setCurrentInput(''); 
       }
     }
   };
@@ -452,6 +517,27 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ config, onComplete, onExit }) =
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="bg-white dark:bg-slate-800 rounded-[3rem] shadow-2xl shadow-indigo-100 dark:shadow-slate-950/40 border border-slate-100 dark:border-slate-700 mb-10 min-h-[300px] relative transition-colors duration-300"
             >
+                 {/* Redo Overlay Hint */}
+                 <AnimatePresence>
+                    {isError && config.redoOnError && (
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-30 bg-rose-500/10 rounded-[3rem] flex items-center justify-center pointer-events-none"
+                        >
+                            <motion.div 
+                                initial={{ scale: 0.8, y: 10 }}
+                                animate={{ scale: 1, y: 0 }}
+                                className="bg-rose-600 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-2 font-bold uppercase tracking-widest text-sm"
+                            >
+                                <RotateCcw className="w-5 h-5 animate-spin-reverse" />
+                                <span>Try Again</span>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                 </AnimatePresence>
+
                  {/* Decoration Container (Overflow Hidden) */}
                  <div className="absolute inset-0 overflow-hidden rounded-[3rem] pointer-events-none">
                      <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500 dark:bg-indigo-400"></div>
