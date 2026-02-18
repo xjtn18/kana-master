@@ -2,6 +2,7 @@ export type KanaType = 'hiragana' | 'katakana' | 'mixed';
 export type GameMode = 'single' | 'multi';
 export type KanaFont = 'sans' | 'serif' | 'rounded' | 'hand' | 'digital' | 'future';
 export type DistributionMode = 'random' | 'frequency';
+export type LayoutMode = 'centered' | 'feed';
 
 export interface KanaChar {
   char: string;
@@ -21,6 +22,7 @@ export interface GameConfig {
   distribution: DistributionMode;
   allowMultiScriptWords: boolean;
   redoOnError: boolean;
+  layout: LayoutMode;
 }
 
 export interface QuestionResult {

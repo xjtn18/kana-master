@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { GameConfig, KanaType, GameMode, KanaFont, DistributionMode } from '../types';
+import { GameConfig, KanaType, GameMode, KanaFont, DistributionMode, LayoutMode } from '../types';
 import { KANA_GROUPS } from '../data/kana';
-import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers, RotateCcw } from 'lucide-react';
+import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers, RotateCcw, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ConfigScreenProps {
   onStart: (config: GameConfig) => void;
 }
 
-const STORAGE_KEY = 'kana-master-config-v6'; 
+const STORAGE_KEY = 'kana-master-config-v7'; 
 
 const DEFAULT_CONFIG = {
   mode: 'multi' as GameMode,
@@ -21,6 +21,7 @@ const DEFAULT_CONFIG = {
   distribution: 'random' as DistributionMode,
   allowMultiScriptWords: false,
   redoOnError: false,
+  layout: 'centered' as LayoutMode,
 };
 
 const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
@@ -30,12 +31,10 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist if migrating from old version
         const validGroupKeys = KANA_GROUPS.map(g => g.key);
         
         let mergedGroups = parsed.selectedGroups;
         if (mergedGroups) {
-             // Filter out any keys that no longer exist
              mergedGroups = mergedGroups.filter((k: string) => (validGroupKeys as string[]).includes(k));
         } else {
              mergedGroups = validGroupKeys;
@@ -48,7 +47,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
             font: parsed.font || DEFAULT_CONFIG.font,
             distribution: parsed.distribution || DEFAULT_CONFIG.distribution,
             allowMultiScriptWords: parsed.allowMultiScriptWords !== undefined ? parsed.allowMultiScriptWords : DEFAULT_CONFIG.allowMultiScriptWords,
-            redoOnError: parsed.redoOnError !== undefined ? parsed.redoOnError : DEFAULT_CONFIG.redoOnError
+            redoOnError: parsed.redoOnError !== undefined ? parsed.redoOnError : DEFAULT_CONFIG.redoOnError,
+            layout: parsed.layout || DEFAULT_CONFIG.layout
         };
       }
     } catch (e) {
@@ -72,6 +72,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
   const [distribution, setDistribution] = useState<DistributionMode>(initialConfig.distribution);
   const [allowMultiScriptWords, setAllowMultiScriptWords] = useState<boolean>(initialConfig.allowMultiScriptWords);
   const [redoOnError, setRedoOnError] = useState<boolean>(initialConfig.redoOnError);
+  const [layout, setLayout] = useState<LayoutMode>(initialConfig.layout);
 
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
   const [isFontsExpanded, setIsFontsExpanded] = useState(false);
@@ -80,8 +81,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
   const [showGradient, setShowGradient] = useState(false);
-  
-  // Custom Scrollbar State (Layout only)
   const [thumbHeight, setThumbHeight] = useState(0);
   const [isScrollable, setIsScrollable] = useState(false);
 
@@ -97,10 +96,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       font,
       distribution,
       allowMultiScriptWords,
-      redoOnError
+      redoOnError,
+      layout
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(configToSave));
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError]);
+  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, layout]);
 
   const triggerStart = () => {
     if (selectedGroups.length === 0) return;
@@ -114,7 +114,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       font,
       distribution,
       allowMultiScriptWords,
-      redoOnError
+      redoOnError,
+      layout
     });
   };
 
@@ -123,7 +124,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     triggerStart();
   };
 
-  // Listen for Enter key to start game
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
@@ -133,22 +133,13 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError]);
+  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, layout]);
 
-
-  // --- Scrollbar Logic ---
-
-  // 1. Calculate Layout (Height, Visibility) - Triggered by ResizeObserver or Transitions
   const updateLayoutState = useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollHeight, clientHeight } = scrollRef.current;
-    
-    // Increased buffer to 4px to avoid sub-pixel rendering errors or minor layout shifts
-    // This ensures scrollbar only appears when there is SIGNIFICANT overflow
     const hasScroll = scrollHeight > clientHeight + 4;
-    
     setIsScrollable(hasScroll);
-
     if (hasScroll) {
         const heightRatio = clientHeight / scrollHeight;
         const newThumbHeight = Math.max(heightRatio * clientHeight, 40); 
@@ -158,90 +149,57 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     }
   }, []);
 
-  // 2. Update Position (Transform) & Gradient - Triggered by Scroll Event
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-
-    // Gradient logic
     const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 5;
     const hasScroll = scrollHeight > clientHeight + 4;
     const shouldShowGradient = hasScroll && !isAtBottom;
-    
-    // Only update state if changed to minimize re-renders during scroll
     if (showGradient !== shouldShowGradient) {
         setShowGradient(shouldShowGradient);
     }
-
-    // Direct DOM update for thumb position
     if (hasScroll && thumbRef.current) {
         const heightRatio = clientHeight / scrollHeight;
         const currentThumbHeight = Math.max(heightRatio * clientHeight, 40); 
-        
         const maxScrollTop = scrollHeight - clientHeight;
         const maxThumbTop = clientHeight - currentThumbHeight;
-        
         let visualTop = 0;
         if (maxScrollTop > 0) {
             visualTop = (scrollTop / maxScrollTop) * maxThumbTop;
         }
-        
         thumbRef.current.style.transform = `translateY(${visualTop}px)`;
     }
   }, [showGradient]);
 
-
-  // Attach Listeners
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-
-    // Using passive listener for better performance
     el.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Resize Observer handles content changes (accordion open, tab switch, etc)
     const observer = new ResizeObserver(() => {
-        // Run immediately
         updateLayoutState();
         handleScroll();
-        
-        // And double check after a small tick in case of layout shifts
         requestAnimationFrame(() => {
              updateLayoutState();
              handleScroll();
         });
     });
     observer.observe(el);
-
-    // Initial check
     updateLayoutState();
     handleScroll();
-
     return () => {
         el.removeEventListener('scroll', handleScroll);
         observer.disconnect();
     };
   }, [updateLayoutState, handleScroll]);
 
-  // Recalculate when specific state changes that might affect layout
   useEffect(() => {
     updateLayoutState();
-    // Use timeout to allow for rendering updates if needed
     const t = setTimeout(() => {
         updateLayoutState();
         handleScroll();
     }, 50);
     return () => clearTimeout(t);
-  }, [activeTab, mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, isGroupsExpanded, isFontsExpanded, updateLayoutState, handleScroll]);
-
-  // Reset scroll when tab changes
-  useEffect(() => {
-      if (scrollRef.current) {
-          scrollRef.current.scrollTop = 0;
-      }
-  }, [activeTab]);
-
-  // --- End Scrollbar Logic ---
+  }, [activeTab, mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, layout, isGroupsExpanded, isFontsExpanded, updateLayoutState, handleScroll]);
 
   const toggleGroup = (key: string) => {
     setSelectedGroups(prev => 
@@ -256,12 +214,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
 
   const hasGroupError = selectedGroups.length === 0;
 
-  const getGroupLabel = () => {
-    if (selectedGroups.length === KANA_GROUPS.length) return 'All';
-    if (selectedGroups.length === 0) return 'None';
-    return 'Custom';
-  };
-  
   const fontOptions = [
       { id: 'sans', label: 'Standard', family: 'font-jp' },
       { id: 'serif', label: 'Classic', family: 'font-jp-serif' },
@@ -271,11 +223,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       { id: 'future', label: 'Future', family: 'font-jp-future' }
   ];
   
-  const getFontLabel = () => {
-      return fontOptions.find(f => f.id === font)?.label || 'Standard';
-  };
+  const getFontLabel = () => fontOptions.find(f => f.id === font)?.label || 'Standard';
 
-  // Shared spring configuration for tab content transitions
   const transitionConfig = { type: "spring" as const, stiffness: 500, damping: 40 };
 
   return (
@@ -286,14 +235,12 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
         transition={{ duration: 0.3 }}
         className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col max-h-full transition-colors duration-300"
       >
-        {/* Header - Fixed */}
         <div className="bg-indigo-600 p-6 md:p-8 text-center relative overflow-hidden flex-shrink-0">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
           <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2 font-jp-future">かなマスター</h1>
           <p className="text-indigo-100 font-medium">Kana Master</p>
         </div>
 
-        {/* Tabs - Fixed */}
         <div className="flex border-b border-slate-100 dark:border-slate-700 relative z-10 bg-white dark:bg-slate-800 flex-shrink-0 transition-colors duration-300">
             <button
                 type="button"
@@ -325,27 +272,14 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
             </button>
         </div>
         
-        {/* Form - Flex Column Container */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 relative">
-            
-            {/* Scrollable Content Wrapper */}
             <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden group">
                 <div 
                     ref={scrollRef}
                     className={`flex-1 overflow-x-hidden p-6 md:p-8 relative no-scrollbar ${
                         (isTransitioning && activeTab !== 'general') ? 'overflow-hidden' : 'overflow-y-auto'
                     }`}
-                    style={{ 
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none'
-                    }}
                 >
-                    <style>{`
-                        .no-scrollbar::-webkit-scrollbar {
-                            display: none;
-                        }
-                    `}</style>
-
                     <AnimatePresence mode="popLayout" initial={false} custom={activeTab}>
                         {activeTab === 'general' ? (
                             <motion.div 
@@ -354,14 +288,9 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={transitionConfig}
-                                onAnimationStart={() => setIsTransitioning(true)}
-                                onAnimationComplete={() => {
-                                    setIsTransitioning(false);
-                                    setTimeout(updateLayoutState, 0);
-                                }}
+                                onAnimationComplete={updateLayoutState}
                                 className="flex flex-col gap-8 pb-4"
                             >
-                                {/* Game Mode Selection */}
                                 <div className="space-y-4">
                                     <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <Zap className="w-4 h-4 mr-2" /> Game Mode
@@ -388,7 +317,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                     </div>
                                 </div>
 
-                                {/* Character Set Selection */}
                                 <div className="space-y-4">
                                     <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <Settings className="w-4 h-4 mr-2" /> Character Set
@@ -411,7 +339,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                     </div>
                                 </div>
 
-                                {/* Group Filter Selection (Accordion) */}
                                 <div className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${
                                     hasGroupError ? 'border-rose-300 ring-2 ring-rose-100 dark:ring-rose-900/20' : 'border-slate-200 dark:border-slate-700'
                                 }`}>
@@ -427,23 +354,9 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             }`}>
                                                 Kana Groups
                                             </span>
-                                            <span className={`ml-3 text-xs font-medium px-2 py-0.5 rounded-full ${
-                                                hasGroupError 
-                                                ? 'bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400' 
-                                                : 'bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-400'
-                                            }`}>
-                                                {getGroupLabel()}
-                                            </span>
                                         </div>
                                         <div className="flex items-center">
-                                            {hasGroupError && (
-                                                <AlertCircle className="w-4 h-4 text-rose-500 mr-2 animate-pulse" />
-                                            )}
-                                            {isGroupsExpanded ? (
-                                                <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                                            ) : (
-                                                <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                                            )}
+                                            {isGroupsExpanded ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
                                         </div>
                                     </button>
 
@@ -453,45 +366,36 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
-                                                className="overflow-hidden"
                                                 onAnimationComplete={updateLayoutState}
+                                                className="overflow-hidden p-4 pt-0 border-t border-slate-200/50 dark:border-slate-600"
                                             >
-                                                <div className="p-4 pt-0 border-t border-slate-200/50 dark:border-slate-600 mt-2">
-                                                    <div className="flex space-x-2 text-xs font-bold mb-3 mt-4">
-                                                        <button type="button" onClick={selectAllGroups} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300">All</button>
-                                                        <span className="text-slate-300 dark:text-slate-600">|</span>
-                                                        <button type="button" onClick={deselectAllGroups} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">None</button>
-                                                    </div>
-                                                    
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        {KANA_GROUPS.map((group) => (
-                                                            <button
-                                                                key={group.key}
-                                                                type="button"
-                                                                onClick={() => toggleGroup(group.key)}
-                                                                className={`text-xs py-2 px-3 rounded-lg font-bold text-left transition-colors flex items-center ${
-                                                                    selectedGroups.includes(group.key)
-                                                                        ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-200 shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-900/50'
-                                                                        : 'text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                                                                }`}
-                                                            >
-                                                                <div className={`w-3 h-3 rounded-full mr-2 border flex-shrink-0 ${
-                                                                    selectedGroups.includes(group.key) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300 dark:border-slate-500'
-                                                                }`}></div>
-                                                                <span className="truncate">{group.label}</span>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                    {hasGroupError && (
-                                                        <p className="text-xs text-rose-500 font-bold mt-3">Please select at least one group.</p>
-                                                    )}
+                                                <div className="flex space-x-2 text-xs font-bold mb-3 mt-4">
+                                                    <button type="button" onClick={selectAllGroups} className="text-indigo-600 dark:text-indigo-400">All</button>
+                                                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                                                    <button type="button" onClick={deselectAllGroups} className="text-slate-400 dark:text-slate-500">None</button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {KANA_GROUPS.map((group) => (
+                                                        <button
+                                                            key={group.key}
+                                                            type="button"
+                                                            onClick={() => toggleGroup(group.key)}
+                                                            className={`text-xs py-2 px-3 rounded-lg font-bold text-left transition-colors flex items-center ${
+                                                                selectedGroups.includes(group.key)
+                                                                    ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-200 shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-900/50'
+                                                                    : 'text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                                            }`}
+                                                        >
+                                                            <div className={`w-3 h-3 rounded-full mr-2 border ${selectedGroups.includes(group.key) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300 dark:border-slate-500'}`}></div>
+                                                            <span className="truncate">{group.label}</span>
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
 
-                                {/* Number of Questions */}
                                 <div className="space-y-4">
                                     <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <List className="w-4 h-4 mr-2" /> Questions
@@ -505,7 +409,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
                                                 questionCount === count
                                                 ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200'
-                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                                             }`}
                                             >
                                             {count === 'all' ? 'All' : count}
@@ -514,7 +418,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                     </div>
                                 </div>
 
-                                {/* Time Limit */}
                                 <div className="space-y-4">
                                     <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <Clock className="w-4 h-4 mr-2" /> Time Limit
@@ -528,7 +431,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
                                                 timeLimit === time
                                                 ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200'
-                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                                             }`}
                                             >
                                             {time === null ? 'None' : `${time}s`}
@@ -537,60 +440,42 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                     </div>
                                 </div>
 
-                                {/* Kana Font (Accordion) */}
-                                <div className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${
-                                    isFontsExpanded ? 'border-slate-300 dark:border-slate-500 ring-2 ring-indigo-50 dark:ring-indigo-900/20' : 'border-slate-200 dark:border-slate-700'
-                                }`}>
+                                <div className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${isFontsExpanded ? 'border-slate-300 dark:border-slate-500' : 'border-slate-200'}`}>
                                     <button 
                                         type="button"
                                         onClick={() => setIsFontsExpanded(!isFontsExpanded)}
-                                        className="flex items-center justify-between w-full p-4 text-left focus:outline-none hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors group"
+                                        className="flex items-center justify-between w-full p-4 text-left group"
                                     >
                                         <div className="flex items-center">
                                             <Type className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
-                                            <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
-                                                Kana Font
-                                            </span>
-                                            <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-400">
-                                                {getFontLabel()}
-                                            </span>
+                                            <span className="text-sm font-semibold uppercase tracking-wider text-slate-500">Kana Font</span>
+                                            <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-400">{getFontLabel()}</span>
                                         </div>
-                                        <div className="flex items-center">
-                                            {isFontsExpanded ? (
-                                                <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                                            ) : (
-                                                <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                                            )}
-                                        </div>
+                                        {isFontsExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                                     </button>
-
                                     <AnimatePresence>
                                         {isFontsExpanded && (
                                             <motion.div
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
-                                                className="overflow-hidden"
                                                 onAnimationComplete={updateLayoutState}
+                                                className="overflow-hidden p-4 pt-0 border-t border-slate-200/50"
                                             >
-                                                <div className="p-4 pt-0 border-t border-slate-200/50 dark:border-slate-600 mt-2">
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        {fontOptions.map((fontOption) => (
-                                                            <button
-                                                            key={fontOption.id}
-                                                            type="button"
-                                                            onClick={() => setFont(fontOption.id as KanaFont)}
-                                                            className={`py-3 px-1 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-center justify-center space-y-1 ${
-                                                                font === fontOption.id
-                                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 shadow-sm'
-                                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
-                                                            }`}
-                                                            >
-                                                                <span className="text-xs">{fontOption.label}</span>
-                                                                <span className={`text-xl ${fontOption.family}`}>あ</span>
-                                                            </button>
-                                                        ))}
-                                                    </div>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {fontOptions.map((fontOption) => (
+                                                        <button
+                                                        key={fontOption.id}
+                                                        type="button"
+                                                        onClick={() => setFont(fontOption.id as KanaFont)}
+                                                        className={`py-3 px-1 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-center justify-center space-y-1 ${
+                                                            font === fontOption.id ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' : 'border-slate-100 bg-white text-slate-600'
+                                                        }`}
+                                                        >
+                                                            <span className="text-xs">{fontOption.label}</span>
+                                                            <span className={`text-xl ${fontOption.family}`}>あ</span>
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             </motion.div>
                                         )}
@@ -604,14 +489,38 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
                                 transition={transitionConfig}
-                                onAnimationStart={() => setIsTransitioning(true)}
-                                onAnimationComplete={() => {
-                                    setIsTransitioning(false);
-                                    setTimeout(updateLayoutState, 0);
-                                }}
+                                onAnimationComplete={updateLayoutState}
                                 className="flex flex-col gap-8 pb-4"
                             >
-                                {/* Input Mode */}
+                                <div className="space-y-4">
+                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        <Monitor className="w-4 h-4 mr-2" /> Layout Style
+                                    </label>
+                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                                        <button
+                                            type="button"
+                                            onClick={() => setLayout('centered')}
+                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                                            layout === 'centered' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
+                                            }`}
+                                        >
+                                            Classic
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLayout('feed')}
+                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                                            layout === 'feed' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
+                                            }`}
+                                        >
+                                            Typewriter
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-slate-400 px-1">
+                                        {layout === 'centered' ? "Focus on one word at a time in the center." : "Kana characters feed from right to left like a typewriter."}
+                                    </p>
+                                </div>
+
                                 <div className="space-y-4">
                                     <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <CheckCircle2 className="w-4 h-4 mr-2" /> Validation Mode
@@ -621,7 +530,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setAutoCheck(true)}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                             }`}
                                         >
                                             Auto (Instant)
@@ -630,20 +539,14 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setAutoCheck(false)}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            !autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            !autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                             }`}
                                         >
                                             Manual (Enter)
                                         </button>
                                     </div>
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
-                                        {autoCheck 
-                                            ? "Checks your input immediately as you type." 
-                                            : "Type your answer and press Enter to confirm."}
-                                    </p>
                                 </div>
 
-                                {/* Redo on Error Mode */}
                                 <div className="space-y-4">
                                     <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <RotateCcw className="w-4 h-4 mr-2" /> Mastery Mode
@@ -653,7 +556,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setRedoOnError(false)}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            !redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            !redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                             }`}
                                         >
                                             Standard
@@ -662,20 +565,14 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setRedoOnError(true)}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                             }`}
                                         >
                                             Redo on Error
                                         </button>
                                     </div>
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
-                                        {redoOnError 
-                                            ? "Mistakes force you to restart the current word from the beginning." 
-                                            : "Continue typing after a mistake is recorded."}
-                                    </p>
                                 </div>
 
-                                {/* Distribution Mode */}
                                 <div className="space-y-4">
                                     <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                         <BarChart3 className="w-4 h-4 mr-2" /> Distribution
@@ -685,33 +582,23 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             type="button"
                                             onClick={() => setDistribution('random')}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            distribution === 'random' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            distribution === 'random' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                             }`}
                                         >
-                                            <span className="flex items-center justify-center gap-2">
-                                                <Shuffle className="w-4 h-4" /> Random
-                                            </span>
+                                            <Shuffle className="w-4 h-4 inline mr-1" /> Random
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setDistribution('frequency')}
                                             className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            distribution === 'frequency' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            distribution === 'frequency' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                             }`}
                                         >
-                                            <span className="flex items-center justify-center gap-2">
-                                                <BarChart3 className="w-4 h-4" /> Weighted
-                                            </span>
+                                            <BarChart3 className="w-4 h-4 inline mr-1" /> Weighted
                                         </button>
                                     </div>
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
-                                        {distribution === 'random' 
-                                            ? "All characters have an equal chance of appearing." 
-                                            : "Common characters appear more frequently (based on corpus data)."}
-                                    </p>
                                 </div>
 
-                                {/* Allow Multi-Script Words (Only for Multi Mode) */}
                                 {mode === 'multi' && (
                                     <motion.div 
                                         initial={{ opacity: 0, height: 0 }}
@@ -727,60 +614,41 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                                 type="button"
                                                 onClick={() => setAllowMultiScriptWords(false)}
                                                 className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                                !allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                                !allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                                 }`}
                                             >
-                                                Consistent (Single)
+                                                Consistent
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setAllowMultiScriptWords(true)}
                                                 className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                                allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                                allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
                                                 }`}
                                             >
-                                                Mixed (Multi)
+                                                Mixed
                                             </button>
                                         </div>
-                                        <p className="text-xs text-slate-400 dark:text-slate-500 px-1">
-                                            {allowMultiScriptWords 
-                                                ? "Words may contain a mix of Hiragana and Katakana." 
-                                                : "Words will be entirely Hiragana or entirely Katakana."}
-                                        </p>
                                     </motion.div>
                                 )}
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
-                
                 {isScrollable && !isTransitioning && (
                     <div className="absolute right-1 top-1 bottom-1 w-1.5 z-50">
-                        <div
-                            ref={thumbRef}
-                            className="w-full bg-slate-300 dark:bg-slate-600 rounded-full cursor-pointer hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors"
-                            style={{ 
-                                height: thumbHeight,
-                                position: 'absolute',
-                                top: 0,
-                            }}
-                        />
+                        <div ref={thumbRef} className="w-full bg-slate-300 dark:bg-slate-600 rounded-full" style={{ height: thumbHeight, position: 'absolute', top: 0 }} />
                     </div>
                 )}
-                
-                <div className={`absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none transition-opacity duration-300 z-10 ${showGradient && !isTransitioning ? 'opacity-100' : 'opacity-0'}`} />
+                <div className={`absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none transition-opacity ${showGradient && !isTransitioning ? 'opacity-100' : 'opacity-0'} z-10`} />
             </div>
-
-            {/* Sticky Footer */}
             <div className="p-6 md:p-8 border-t border-slate-50 dark:border-slate-700 z-20 bg-white dark:bg-slate-800 flex-shrink-0 transition-colors duration-300">
                 <motion.button
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={hasGroupError}
-                    className={`w-full font-bold py-4 rounded-2xl shadow-lg transition-all transform flex items-center justify-center space-x-2 ${
-                        hasGroupError 
-                        ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-500 cursor-not-allowed'
-                        : 'bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white shadow-indigo-200 dark:shadow-slate-900/50 hover:shadow-indigo-300 dark:hover:shadow-slate-900/80'
+                    className={`w-full font-bold py-4 rounded-2xl shadow-lg transform flex items-center justify-center space-x-2 ${
+                        hasGroupError ? 'bg-slate-300 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
                     }`}
                 >
                     <Play className="w-5 h-5 fill-current" />
