@@ -648,7 +648,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                     type="submit"
                     disabled={hasGroupError}
                     className={`w-full font-bold py-4 rounded-2xl shadow-lg transform flex items-center justify-center space-x-2 ${
-                        hasGroupError ? 'bg-slate-300 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
+                        hasGroupError ? 'bg-slate-300 text-slate-500 shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25 dark:shadow-none'
                     }`}
                 >
                     <Play className="w-5 h-5 fill-current" />

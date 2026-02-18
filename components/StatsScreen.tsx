@@ -275,7 +275,7 @@ const StatsScreen: React.FC<StatsScreenProps> = ({ results, config, onRestart, o
 
                 <button
                     onClick={onRetry}
-                    className="flex-1 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-slate-900/30 transition-all flex items-center justify-center space-x-2 transform hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex-1 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/25 dark:shadow-none transition-all flex items-center justify-center space-x-2 transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                     <RotateCcw className="w-5 h-5" />
                     <span>Redo (Tab)</span>
