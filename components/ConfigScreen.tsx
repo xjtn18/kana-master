@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { GameConfig, KanaType, GameMode, KanaFont, DistributionMode, LayoutMode } from '../types';
 import { KANA_GROUPS } from '../data/kana';
-import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers, RotateCcw, Monitor } from 'lucide-react';
+import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers, RotateCcw, Monitor, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ConfigScreenProps {
@@ -313,6 +313,15 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                                             }`}
                                         >
                                             Multi (Words)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMode('flashcard')}
+                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                                            mode === 'flashcard' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                            }`}
+                                        >
+                                            <BookOpen className="w-4 h-4 inline mr-1" /> Flashcard
                                         </button>
                                     </div>
                                 </div>

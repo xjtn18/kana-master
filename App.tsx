@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ConfigScreen from './components/ConfigScreen';
 import QuizScreen from './components/QuizScreen';
+import FlashcardScreen from './components/FlashcardScreen';
 import StatsScreen from './components/StatsScreen';
 import { GameConfig, QuestionResult } from './types';
 import { Moon, Sun } from 'lucide-react';
@@ -77,7 +78,9 @@ function App() {
       <main className="flex-1 flex flex-col items-center justify-center w-full min-h-0 relative px-4 overflow-hidden">
         {gameState === 'config' && <ConfigScreen onStart={handleStart} />}
         
-        {gameState === 'quiz' && config && (
+        {gameState === 'quiz' && config && config.mode === 'flashcard' ? (
+          <FlashcardScreen config={config} onExit={handleRestart} />
+        ) : gameState === 'quiz' && config && (
           <QuizScreen config={config} onComplete={handleComplete} onExit={handleRestart} />
         )}
 

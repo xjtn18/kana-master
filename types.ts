@@ -1,5 +1,5 @@
 export type KanaType = 'hiragana' | 'katakana' | 'mixed';
-export type GameMode = 'single' | 'multi';
+export type GameMode = 'single' | 'multi' | 'flashcard';
 export type KanaFont = 'sans' | 'serif' | 'rounded' | 'hand' | 'digital' | 'future';
 export type DistributionMode = 'random' | 'frequency';
 export type LayoutMode = 'centered' | 'feed';
@@ -29,6 +29,12 @@ export interface QuestionResult {
   char: KanaChar;
   timeTaken: number;
   mistakes: number;
+}
+
+export interface VocabCard {
+  kanji: string;
+  reading: string;
+  meaning: string;
 }
 
 export interface GameStats {
