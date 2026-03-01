@@ -1,27 +1,53 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { GameConfig, KanaType, GameMode, KanaFont, DistributionMode, LayoutMode } from '../types';
-import { KANA_GROUPS } from '../data/kana';
-import { Settings, Play, CheckCircle2, Clock, List, Zap, Filter, ChevronDown, ChevronUp, AlertCircle, Type, Sliders, Shuffle, BarChart3, Layers, RotateCcw, Monitor, BookOpen } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import {
+  GameConfig,
+  KanaType,
+  GameMode,
+  KanaFont,
+  DistributionMode,
+  LayoutMode,
+} from "../types";
+import { KANA_GROUPS } from "../data/kana";
+import {
+  Settings,
+  Play,
+  CheckCircle2,
+  Clock,
+  List,
+  Zap,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  Type,
+  Sliders,
+  Shuffle,
+  BarChart3,
+  Layers,
+  RotateCcw,
+  Monitor,
+  BookOpen,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ConfigScreenProps {
   onStart: (config: GameConfig) => void;
 }
 
-const STORAGE_KEY = 'kana-master-config-v7'; 
+const STORAGE_KEY = "kana-master-config-v7";
 
 const DEFAULT_CONFIG = {
-  mode: 'multi' as GameMode,
-  kanaType: 'hiragana' as KanaType,
-  questionCount: 10 as number | 'all',
+  mode: "multi" as GameMode,
+  kanaType: "hiragana" as KanaType,
+  questionCount: 10 as number | "all",
   timeLimit: null as number | null,
   autoCheck: true,
-  selectedGroups: KANA_GROUPS.map(g => g.key), // Default all selected
-  font: 'sans' as KanaFont,
-  distribution: 'random' as DistributionMode,
+  selectedGroups: KANA_GROUPS.map((g) => g.key), // Default all selected
+  font: "sans" as KanaFont,
+  distribution: "random" as DistributionMode,
   allowMultiScriptWords: false,
   redoOnError: false,
-  layout: 'centered' as LayoutMode,
+  layout: "centered" as LayoutMode,
 };
 
 const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
@@ -31,47 +57,67 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const validGroupKeys = KANA_GROUPS.map(g => g.key);
-        
+        const validGroupKeys = KANA_GROUPS.map((g) => g.key);
+
         let mergedGroups = parsed.selectedGroups;
         if (mergedGroups) {
-             mergedGroups = mergedGroups.filter((k: string) => (validGroupKeys as string[]).includes(k));
+          mergedGroups = mergedGroups.filter((k: string) =>
+            (validGroupKeys as string[]).includes(k),
+          );
         } else {
-             mergedGroups = validGroupKeys;
+          mergedGroups = validGroupKeys;
         }
 
-        return { 
-            ...DEFAULT_CONFIG, 
-            ...parsed, 
-            selectedGroups: mergedGroups,
-            font: parsed.font || DEFAULT_CONFIG.font,
-            distribution: parsed.distribution || DEFAULT_CONFIG.distribution,
-            allowMultiScriptWords: parsed.allowMultiScriptWords !== undefined ? parsed.allowMultiScriptWords : DEFAULT_CONFIG.allowMultiScriptWords,
-            redoOnError: parsed.redoOnError !== undefined ? parsed.redoOnError : DEFAULT_CONFIG.redoOnError,
-            layout: parsed.layout || DEFAULT_CONFIG.layout
+        return {
+          ...DEFAULT_CONFIG,
+          ...parsed,
+          selectedGroups: mergedGroups,
+          font: parsed.font || DEFAULT_CONFIG.font,
+          distribution: parsed.distribution || DEFAULT_CONFIG.distribution,
+          allowMultiScriptWords:
+            parsed.allowMultiScriptWords !== undefined
+              ? parsed.allowMultiScriptWords
+              : DEFAULT_CONFIG.allowMultiScriptWords,
+          redoOnError:
+            parsed.redoOnError !== undefined
+              ? parsed.redoOnError
+              : DEFAULT_CONFIG.redoOnError,
+          layout: parsed.layout || DEFAULT_CONFIG.layout,
         };
       }
     } catch (e) {
-      console.warn('Failed to parse saved config:', e);
+      console.warn("Failed to parse saved config:", e);
     }
     return DEFAULT_CONFIG;
   };
 
   const [initialConfig] = useState(getInitialState);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'advanced'>('general');
+  const [activeTab, setActiveTab] = useState<"general" | "advanced">("general");
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [mode, setMode] = useState<GameMode>(initialConfig.mode);
   const [kanaType, setKanaType] = useState<KanaType>(initialConfig.kanaType);
-  const [questionCount, setQuestionCount] = useState<number | 'all'>(initialConfig.questionCount);
-  const [timeLimit, setTimeLimit] = useState<number | null>(initialConfig.timeLimit);
+  const [questionCount, setQuestionCount] = useState<number | "all">(
+    initialConfig.questionCount,
+  );
+  const [timeLimit, setTimeLimit] = useState<number | null>(
+    initialConfig.timeLimit,
+  );
   const [autoCheck, setAutoCheck] = useState<boolean>(initialConfig.autoCheck);
-  const [selectedGroups, setSelectedGroups] = useState<string[]>(initialConfig.selectedGroups || DEFAULT_CONFIG.selectedGroups);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>(
+    initialConfig.selectedGroups || DEFAULT_CONFIG.selectedGroups,
+  );
   const [font, setFont] = useState<KanaFont>(initialConfig.font);
-  const [distribution, setDistribution] = useState<DistributionMode>(initialConfig.distribution);
-  const [allowMultiScriptWords, setAllowMultiScriptWords] = useState<boolean>(initialConfig.allowMultiScriptWords);
-  const [redoOnError, setRedoOnError] = useState<boolean>(initialConfig.redoOnError);
+  const [distribution, setDistribution] = useState<DistributionMode>(
+    initialConfig.distribution,
+  );
+  const [allowMultiScriptWords, setAllowMultiScriptWords] = useState<boolean>(
+    initialConfig.allowMultiScriptWords,
+  );
+  const [redoOnError, setRedoOnError] = useState<boolean>(
+    initialConfig.redoOnError,
+  );
   const [layout, setLayout] = useState<LayoutMode>(initialConfig.layout);
 
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
@@ -97,10 +143,22 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       distribution,
       allowMultiScriptWords,
       redoOnError,
-      layout
+      layout,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(configToSave));
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, layout]);
+  }, [
+    mode,
+    kanaType,
+    questionCount,
+    timeLimit,
+    autoCheck,
+    selectedGroups,
+    font,
+    distribution,
+    allowMultiScriptWords,
+    redoOnError,
+    layout,
+  ]);
 
   const triggerStart = () => {
     if (selectedGroups.length === 0) return;
@@ -115,7 +173,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       distribution,
       allowMultiScriptWords,
       redoOnError,
-      layout
+      layout,
     });
   };
 
@@ -126,14 +184,26 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         triggerStart();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, layout]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    mode,
+    kanaType,
+    questionCount,
+    timeLimit,
+    autoCheck,
+    selectedGroups,
+    font,
+    distribution,
+    allowMultiScriptWords,
+    redoOnError,
+    layout,
+  ]);
 
   const updateLayoutState = useCallback(() => {
     if (!scrollRef.current) return;
@@ -141,11 +211,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     const hasScroll = scrollHeight > clientHeight + 4;
     setIsScrollable(hasScroll);
     if (hasScroll) {
-        const heightRatio = clientHeight / scrollHeight;
-        const newThumbHeight = Math.max(heightRatio * clientHeight, 40); 
-        setThumbHeight(newThumbHeight);
+      const heightRatio = clientHeight / scrollHeight;
+      const newThumbHeight = Math.max(heightRatio * clientHeight, 40);
+      setThumbHeight(newThumbHeight);
     } else {
-        setShowGradient(false);
+      setShowGradient(false);
     }
   }, []);
 
@@ -156,80 +226,101 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     const hasScroll = scrollHeight > clientHeight + 4;
     const shouldShowGradient = hasScroll && !isAtBottom;
     if (showGradient !== shouldShowGradient) {
-        setShowGradient(shouldShowGradient);
+      setShowGradient(shouldShowGradient);
     }
     if (hasScroll && thumbRef.current) {
-        const heightRatio = clientHeight / scrollHeight;
-        const currentThumbHeight = Math.max(heightRatio * clientHeight, 40); 
-        const maxScrollTop = scrollHeight - clientHeight;
-        const maxThumbTop = clientHeight - currentThumbHeight;
-        let visualTop = 0;
-        if (maxScrollTop > 0) {
-            visualTop = (scrollTop / maxScrollTop) * maxThumbTop;
-        }
-        thumbRef.current.style.transform = `translateY(${visualTop}px)`;
+      const heightRatio = clientHeight / scrollHeight;
+      const currentThumbHeight = Math.max(heightRatio * clientHeight, 40);
+      const maxScrollTop = scrollHeight - clientHeight;
+      const maxThumbTop = clientHeight - currentThumbHeight;
+      let visualTop = 0;
+      if (maxScrollTop > 0) {
+        visualTop = (scrollTop / maxScrollTop) * maxThumbTop;
+      }
+      thumbRef.current.style.transform = `translateY(${visualTop}px)`;
     }
   }, [showGradient]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.addEventListener('scroll', handleScroll, { passive: true });
+    el.addEventListener("scroll", handleScroll, { passive: true });
     const observer = new ResizeObserver(() => {
+      updateLayoutState();
+      handleScroll();
+      requestAnimationFrame(() => {
         updateLayoutState();
         handleScroll();
-        requestAnimationFrame(() => {
-             updateLayoutState();
-             handleScroll();
-        });
+      });
     });
     observer.observe(el);
     updateLayoutState();
     handleScroll();
     return () => {
-        el.removeEventListener('scroll', handleScroll);
-        observer.disconnect();
+      el.removeEventListener("scroll", handleScroll);
+      observer.disconnect();
     };
   }, [updateLayoutState, handleScroll]);
 
   useEffect(() => {
     updateLayoutState();
     const t = setTimeout(() => {
-        updateLayoutState();
-        handleScroll();
+      updateLayoutState();
+      handleScroll();
     }, 50);
     return () => clearTimeout(t);
-  }, [activeTab, mode, kanaType, questionCount, timeLimit, autoCheck, selectedGroups, font, distribution, allowMultiScriptWords, redoOnError, layout, isGroupsExpanded, isFontsExpanded, updateLayoutState, handleScroll]);
+  }, [
+    activeTab,
+    mode,
+    kanaType,
+    questionCount,
+    timeLimit,
+    autoCheck,
+    selectedGroups,
+    font,
+    distribution,
+    allowMultiScriptWords,
+    redoOnError,
+    layout,
+    isGroupsExpanded,
+    isFontsExpanded,
+    updateLayoutState,
+    handleScroll,
+  ]);
 
   const toggleGroup = (key: string) => {
-    setSelectedGroups(prev => 
-      prev.includes(key) 
-        ? prev.filter(k => k !== key)
-        : [...prev, key]
+    setSelectedGroups((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     );
   };
 
-  const selectAllGroups = () => setSelectedGroups(KANA_GROUPS.map(g => g.key));
+  const selectAllGroups = () =>
+    setSelectedGroups(KANA_GROUPS.map((g) => g.key));
   const deselectAllGroups = () => setSelectedGroups([]);
 
   const hasGroupError = selectedGroups.length === 0;
 
   const fontOptions = [
-      { id: 'sans', label: 'Standard', family: 'font-jp' },
-      { id: 'serif', label: 'Classic', family: 'font-jp-serif' },
-      { id: 'rounded', label: 'Cute', family: 'font-jp-rounded' },
-      { id: 'hand', label: 'Brush', family: 'font-jp-hand' },
-      { id: 'digital', label: 'Digital', family: 'font-jp-digital' },
-      { id: 'future', label: 'Future', family: 'font-jp-future' }
+    { id: "sans", label: "Standard", family: "font-jp" },
+    { id: "serif", label: "Classic", family: "font-jp-serif" },
+    { id: "rounded", label: "Cute", family: "font-jp-rounded" },
+    { id: "hand", label: "Brush", family: "font-jp-hand" },
+    { id: "digital", label: "Digital", family: "font-jp-digital" },
+    { id: "future", label: "Future", family: "font-jp-future" },
   ];
-  
-  const getFontLabel = () => fontOptions.find(f => f.id === font)?.label || 'Standard';
 
-  const transitionConfig = { type: "spring" as const, stiffness: 500, damping: 40 };
+  const getFontLabel = () =>
+    fontOptions.find((f) => f.id === font)?.label || "Standard";
+
+  const transitionConfig = {
+    type: "spring" as const,
+    stiffness: 500,
+    damping: 40,
+  };
 
   return (
     <div className="w-full h-full flex items-center justify-center p-4 min-h-0">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
@@ -237,433 +328,547 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
       >
         <div className="bg-indigo-600 p-6 md:p-8 text-center relative overflow-hidden flex-shrink-0">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2 font-jp-future">かなマスター</h1>
+          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2 font-jp-future">
+            かなマスター
+          </h1>
           <p className="text-indigo-100 font-medium">Kana Master</p>
         </div>
 
         <div className="flex border-b border-slate-100 dark:border-slate-700 relative z-10 bg-white dark:bg-slate-800 flex-shrink-0 transition-colors duration-300">
-            <button
-                type="button"
-                onClick={() => setActiveTab('general')}
-                className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
-                    activeTab === 'general' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
-            >
-                <span className="flex items-center justify-center gap-2">
-                    <Settings className="w-4 h-4" /> General
-                </span>
-                {activeTab === 'general' && (
-                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400" transition={{ease: "easeOut", duration: 0.15}} />
-                )}
-            </button>
-            <button
-                type="button"
-                onClick={() => setActiveTab('advanced')}
-                className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
-                    activeTab === 'advanced' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
-            >
-                 <span className="flex items-center justify-center gap-2">
-                    <Sliders className="w-4 h-4" /> Advanced
-                </span>
-                {activeTab === 'advanced' && (
-                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400" transition={{ease: "easeOut", duration: 0.15}} />
-                )}
-            </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("general")}
+            className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
+              activeTab === "general"
+                ? "text-indigo-600 dark:text-indigo-400"
+                : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            }`}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Settings className="w-4 h-4" /> General
+            </span>
+            {activeTab === "general" && (
+              <motion.div
+                layoutId="tab-underline"
+                className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400"
+                transition={{ ease: "easeOut", duration: 0.15 }}
+              />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("advanced")}
+            className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
+              activeTab === "advanced"
+                ? "text-indigo-600 dark:text-indigo-400"
+                : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            }`}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Sliders className="w-4 h-4" /> Advanced
+            </span>
+            {activeTab === "advanced" && (
+              <motion.div
+                layoutId="tab-underline"
+                className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400"
+                transition={{ ease: "easeOut", duration: 0.15 }}
+              />
+            )}
+          </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 relative">
-            <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden group">
-                <div 
-                    ref={scrollRef}
-                    className={`flex-1 overflow-x-hidden p-6 md:p-8 relative no-scrollbar ${
-                        (isTransitioning && activeTab !== 'general') ? 'overflow-hidden' : 'overflow-y-auto'
-                    }`}
-                >
-                    <AnimatePresence mode="popLayout" initial={false} custom={activeTab}>
-                        {activeTab === 'general' ? (
-                            <motion.div 
-                                key="general"
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={transitionConfig}
-                                onAnimationComplete={updateLayoutState}
-                                className="flex flex-col gap-8 pb-4"
-                            >
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <Zap className="w-4 h-4 mr-2" /> Game Mode
-                                    </label>
-                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
-                                        <button
-                                            type="button"
-                                            onClick={() => setMode('single')}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            mode === 'single' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                            }`}
-                                        >
-                                            Single Char
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setMode('multi')}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            mode === 'multi' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                            }`}
-                                        >
-                                            Multi (Words)
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setMode('flashcard')}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            mode === 'flashcard' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                            }`}
-                                        >
-                                            <BookOpen className="w-4 h-4 inline mr-1" /> Flashcard
-                                        </button>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <Settings className="w-4 h-4 mr-2" /> Character Set
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {(['hiragana', 'katakana', 'mixed'] as const).map((type) => (
-                                            <button
-                                            key={type}
-                                            type="button"
-                                            onClick={() => setKanaType(type)}
-                                            className={`py-3 px-4 rounded-xl text-sm font-bold capitalize transition-all duration-200 border-2 ${
-                                                kanaType === type
-                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 shadow-sm'
-                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                                            }`}
-                                            >
-                                            {type}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${
-                                    hasGroupError ? 'border-rose-300 ring-2 ring-rose-100 dark:ring-rose-900/20' : 'border-slate-200 dark:border-slate-700'
-                                }`}>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setIsGroupsExpanded(!isGroupsExpanded)}
-                                        className="flex items-center justify-between w-full p-4 text-left focus:outline-none hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors group"
-                                    >
-                                        <div className="flex items-center">
-                                            <Filter className={`w-4 h-4 mr-2 ${hasGroupError ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`} />
-                                            <span className={`text-sm font-semibold uppercase tracking-wider transition-colors ${
-                                                hasGroupError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'
-                                            }`}>
-                                                Kana Groups
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            {isGroupsExpanded ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
-                                        </div>
-                                    </button>
-
-                                    <AnimatePresence>
-                                        {isGroupsExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                onAnimationComplete={updateLayoutState}
-                                                className="overflow-hidden p-4 pt-0 border-t border-slate-200/50 dark:border-slate-600"
-                                            >
-                                                <div className="flex space-x-2 text-xs font-bold mb-3 mt-4">
-                                                    <button type="button" onClick={selectAllGroups} className="text-indigo-600 dark:text-indigo-400">All</button>
-                                                    <span className="text-slate-300 dark:text-slate-600">|</span>
-                                                    <button type="button" onClick={deselectAllGroups} className="text-slate-400 dark:text-slate-500">None</button>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {KANA_GROUPS.map((group) => (
-                                                        <button
-                                                            key={group.key}
-                                                            type="button"
-                                                            onClick={() => toggleGroup(group.key)}
-                                                            className={`text-xs py-2 px-3 rounded-lg font-bold text-left transition-colors flex items-center ${
-                                                                selectedGroups.includes(group.key)
-                                                                    ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-200 shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-900/50'
-                                                                    : 'text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                                                            }`}
-                                                        >
-                                                            <div className={`w-3 h-3 rounded-full mr-2 border ${selectedGroups.includes(group.key) ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300 dark:border-slate-500'}`}></div>
-                                                            <span className="truncate">{group.label}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <List className="w-4 h-4 mr-2" /> Questions
-                                    </label>
-                                    <div className="grid grid-cols-4 gap-3">
-                                        {([10, 25, 50, 'all'] as const).map((count) => (
-                                            <button
-                                            key={count}
-                                            type="button"
-                                            onClick={() => setQuestionCount(count)}
-                                            className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
-                                                questionCount === count
-                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200'
-                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                                            }`}
-                                            >
-                                            {count === 'all' ? 'All' : count}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <Clock className="w-4 h-4 mr-2" /> Time Limit
-                                    </label>
-                                    <div className="grid grid-cols-4 gap-3">
-                                        {([null, 30, 60, 120] as const).map((time) => (
-                                            <button
-                                            key={time === null ? 'none' : time}
-                                            type="button"
-                                            onClick={() => setTimeLimit(time)}
-                                            className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
-                                                timeLimit === time
-                                                ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200'
-                                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                                            }`}
-                                            >
-                                            {time === null ? 'None' : `${time}s`}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${isFontsExpanded ? 'border-slate-300 dark:border-slate-500' : 'border-slate-200'}`}>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setIsFontsExpanded(!isFontsExpanded)}
-                                        className="flex items-center justify-between w-full p-4 text-left group"
-                                    >
-                                        <div className="flex items-center">
-                                            <Type className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
-                                            <span className="text-sm font-semibold uppercase tracking-wider text-slate-500">Kana Font</span>
-                                            <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-400">{getFontLabel()}</span>
-                                        </div>
-                                        {isFontsExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                                    </button>
-                                    <AnimatePresence>
-                                        {isFontsExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                onAnimationComplete={updateLayoutState}
-                                                className="overflow-hidden p-4 pt-0 border-t border-slate-200/50"
-                                            >
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {fontOptions.map((fontOption) => (
-                                                        <button
-                                                        key={fontOption.id}
-                                                        type="button"
-                                                        onClick={() => setFont(fontOption.id as KanaFont)}
-                                                        className={`py-3 px-1 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-center justify-center space-y-1 ${
-                                                            font === fontOption.id ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' : 'border-slate-100 bg-white text-slate-600'
-                                                        }`}
-                                                        >
-                                                            <span className="text-xs">{fontOption.label}</span>
-                                                            <span className={`text-xl ${fontOption.family}`}>あ</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key="advanced"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                transition={transitionConfig}
-                                onAnimationComplete={updateLayoutState}
-                                className="flex flex-col gap-8 pb-4"
-                            >
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <Monitor className="w-4 h-4 mr-2" /> Layout Style
-                                    </label>
-                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
-                                        <button
-                                            type="button"
-                                            onClick={() => setLayout('centered')}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            layout === 'centered' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            Classic
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setLayout('feed')}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            layout === 'feed' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            Typewriter
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-slate-400 px-1">
-                                        {layout === 'centered' ? "Focus on one word at a time in the center." : "Kana characters feed from right to left like a typewriter."}
-                                    </p>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <CheckCircle2 className="w-4 h-4 mr-2" /> Validation Mode
-                                    </label>
-                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
-                                        <button
-                                            type="button"
-                                            onClick={() => setAutoCheck(true)}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            Auto (Instant)
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setAutoCheck(false)}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            !autoCheck ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            Manual (Enter)
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <RotateCcw className="w-4 h-4 mr-2" /> Mastery Mode
-                                    </label>
-                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
-                                        <button
-                                            type="button"
-                                            onClick={() => setRedoOnError(false)}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            !redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            Standard
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setRedoOnError(true)}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            redoOnError ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            Redo on Error
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        <BarChart3 className="w-4 h-4 mr-2" /> Distribution
-                                    </label>
-                                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
-                                        <button
-                                            type="button"
-                                            onClick={() => setDistribution('random')}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            distribution === 'random' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            <Shuffle className="w-4 h-4 inline mr-1" /> Random
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setDistribution('frequency')}
-                                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                            distribution === 'frequency' ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                            }`}
-                                        >
-                                            <BarChart3 className="w-4 h-4 inline mr-1" /> Weighted
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {mode === 'multi' && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="space-y-4"
-                                    >
-                                        <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            <Layers className="w-4 h-4 mr-2" /> Word Scripts
-                                        </label>
-                                        <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
-                                            <button
-                                                type="button"
-                                                onClick={() => setAllowMultiScriptWords(false)}
-                                                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                                !allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                                }`}
-                                            >
-                                                Consistent
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setAllowMultiScriptWords(true)}
-                                                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
-                                                allowMultiScriptWords ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-slate-500'
-                                                }`}
-                                            >
-                                                Mixed
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-                {isScrollable && !isTransitioning && (
-                    <div className="absolute right-1 top-1 bottom-1 w-1.5 z-50">
-                        <div ref={thumbRef} className="w-full bg-slate-300 dark:bg-slate-600 rounded-full" style={{ height: thumbHeight, position: 'absolute', top: 0 }} />
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 min-h-0 relative"
+        >
+          <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden group">
+            <div
+              ref={scrollRef}
+              className={`flex-1 overflow-x-hidden p-6 md:p-8 relative no-scrollbar ${
+                isTransitioning && activeTab !== "general"
+                  ? "overflow-hidden"
+                  : "overflow-y-auto"
+              }`}
+            >
+              <AnimatePresence
+                mode="popLayout"
+                initial={false}
+                custom={activeTab}
+              >
+                {activeTab === "general" ? (
+                  <motion.div
+                    key="general"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={transitionConfig}
+                    onAnimationComplete={updateLayoutState}
+                    className="flex flex-col gap-8 pb-4"
+                  >
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <Zap className="w-4 h-4 mr-2" /> Game Mode
+                      </label>
+                      <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                        <button
+                          type="button"
+                          onClick={() => setMode("single")}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            mode === "single"
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          }`}
+                        >
+                          Single Char
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMode("multi")}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            mode === "multi"
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          }`}
+                        >
+                          Multi (Words)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMode("flashcard")}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            mode === "flashcard"
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          }`}
+                        >
+                          <BookOpen className="w-4 h-4 inline mr-1" /> Flashcard
+                        </button>
+                      </div>
                     </div>
+
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <Settings className="w-4 h-4 mr-2" /> Character Set
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {(["hiragana", "katakana", "mixed"] as const).map(
+                          (type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setKanaType(type)}
+                              className={`py-3 px-4 rounded-xl text-sm font-bold capitalize transition-all duration-200 border-2 ${
+                                kanaType === type
+                                  ? "border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                                  : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ),
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${
+                        hasGroupError
+                          ? "border-rose-300 ring-2 ring-rose-100 dark:ring-rose-900/20"
+                          : "border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setIsGroupsExpanded(!isGroupsExpanded)}
+                        className="flex items-center justify-between w-full p-4 text-left focus:outline-none hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors group"
+                      >
+                        <div className="flex items-center">
+                          <Filter
+                            className={`w-4 h-4 mr-2 ${hasGroupError ? "text-rose-500" : "text-slate-500 dark:text-slate-400"}`}
+                          />
+                          <span
+                            className={`text-sm font-semibold uppercase tracking-wider transition-colors ${
+                              hasGroupError
+                                ? "text-rose-600 dark:text-rose-400"
+                                : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
+                            }`}
+                          >
+                            Kana Groups
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          {isGroupsExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                          )}
+                        </div>
+                      </button>
+
+                      <AnimatePresence>
+                        {isGroupsExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            onAnimationComplete={updateLayoutState}
+                            className="overflow-hidden p-4 border-t border-slate-200/50 dark:border-slate-600"
+                          >
+                            <div className="flex space-x-2 text-xs font-bold mb-3 mt-4">
+                              <button
+                                type="button"
+                                onClick={selectAllGroups}
+                                className="text-indigo-600 dark:text-indigo-400"
+                              >
+                                All
+                              </button>
+                              <span className="text-slate-300 dark:text-slate-600">
+                                |
+                              </span>
+                              <button
+                                type="button"
+                                onClick={deselectAllGroups}
+                                className="text-slate-400 dark:text-slate-500"
+                              >
+                                None
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              {KANA_GROUPS.map((group) => (
+                                <button
+                                  key={group.key}
+                                  type="button"
+                                  onClick={() => toggleGroup(group.key)}
+                                  className={`text-xs py-2 px-3 rounded-lg font-bold text-left transition-colors flex items-center ${
+                                    selectedGroups.includes(group.key)
+                                      ? "bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-200 shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-900/50"
+                                      : "text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                  }`}
+                                >
+                                  <div
+                                    className={`w-3 h-3 rounded-full mr-2 border ${selectedGroups.includes(group.key) ? "bg-indigo-500 border-indigo-500" : "border-slate-300 dark:border-slate-500"}`}
+                                  ></div>
+                                  <span className="truncate">
+                                    {group.label}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <List className="w-4 h-4 mr-2" /> Questions
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {([10, 25, 50, "all"] as const).map((count) => (
+                          <button
+                            key={count}
+                            type="button"
+                            onClick={() => setQuestionCount(count)}
+                            className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
+                              questionCount === count
+                                ? "border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200"
+                                : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                            }`}
+                          >
+                            {count === "all" ? "All" : count}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <Clock className="w-4 h-4 mr-2" /> Time Limit
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {([null, 30, 60, 120] as const).map((time) => (
+                          <button
+                            key={time === null ? "none" : time}
+                            type="button"
+                            onClick={() => setTimeLimit(time)}
+                            className={`py-2 px-3 rounded-lg text-sm font-bold transition-all border-2 ${
+                              timeLimit === time
+                                ? "border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200"
+                                : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                            }`}
+                          >
+                            {time === null ? "None" : `${time}s`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div
+                      className={`border rounded-xl bg-slate-50 dark:bg-slate-700/30 overflow-hidden transition-all duration-300 ${isFontsExpanded ? "border-slate-300 dark:border-slate-500" : "border-slate-200 dark:border-slate-700"}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setIsFontsExpanded(!isFontsExpanded)}
+                        className="flex items-center justify-between w-full p-4 text-left group hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors"
+                      >
+                        <div className="flex items-center">
+                          <Type className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            Kana Font
+                          </span>
+                          <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300">
+                            {getFontLabel()}
+                          </span>
+                        </div>
+                        {isFontsExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        )}
+                      </button>
+                      <AnimatePresence>
+                        {isFontsExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            onAnimationComplete={updateLayoutState}
+                            className="overflow-hidden p-4 border-t border-slate-200/50 dark:border-slate-600"
+                          >
+                            <div className="grid grid-cols-3 gap-2">
+                              {fontOptions.map((fontOption) => (
+                                <button
+                                  key={fontOption.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setFont(fontOption.id as KanaFont)
+                                  }
+                                  className={`py-3 px-1 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-center justify-center space-y-1 ${
+                                    font === fontOption.id
+                                      ? "border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                                      : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
+                                  }`}
+                                >
+                                  <span className="text-xs">
+                                    {fontOption.label}
+                                  </span>
+                                  <span
+                                    className={`text-xl ${fontOption.family}`}
+                                  >
+                                    あ
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="advanced"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={transitionConfig}
+                    onAnimationComplete={updateLayoutState}
+                    className="flex flex-col gap-8 pb-4"
+                  >
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <Monitor className="w-4 h-4 mr-2" /> Layout Style
+                      </label>
+                      <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                        <button
+                          type="button"
+                          onClick={() => setLayout("centered")}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            layout === "centered"
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Classic
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLayout("feed")}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            layout === "feed"
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Typewriter
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-400 px-1">
+                        {layout === "centered"
+                          ? "Focus on one word at a time in the center."
+                          : "Kana characters feed from right to left like a typewriter."}
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <CheckCircle2 className="w-4 h-4 mr-2" /> Validation
+                        Mode
+                      </label>
+                      <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                        <button
+                          type="button"
+                          onClick={() => setAutoCheck(true)}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            autoCheck
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Auto (Instant)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAutoCheck(false)}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            !autoCheck
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Manual (Enter)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <RotateCcw className="w-4 h-4 mr-2" /> Mastery Mode
+                      </label>
+                      <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                        <button
+                          type="button"
+                          onClick={() => setRedoOnError(false)}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            !redoOnError
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Standard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRedoOnError(true)}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            redoOnError
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Redo on Error
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <BarChart3 className="w-4 h-4 mr-2" /> Distribution
+                      </label>
+                      <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                        <button
+                          type="button"
+                          onClick={() => setDistribution("random")}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            distribution === "random"
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          <Shuffle className="w-4 h-4 inline mr-1" /> Random
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDistribution("frequency")}
+                          className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                            distribution === "frequency"
+                              ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          <BarChart3 className="w-4 h-4 inline mr-1" /> Weighted
+                        </button>
+                      </div>
+                    </div>
+
+                    {mode === "multi" && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-4"
+                      >
+                        <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <Layers className="w-4 h-4 mr-2" /> Word Scripts
+                        </label>
+                        <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl transition-colors duration-300">
+                          <button
+                            type="button"
+                            onClick={() => setAllowMultiScriptWords(false)}
+                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                              !allowMultiScriptWords
+                                ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            Consistent
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllowMultiScriptWords(true)}
+                            className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${
+                              allowMultiScriptWords
+                                ? "bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-200 shadow-sm"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            Mixed
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </motion.div>
                 )}
-                <div className={`absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none transition-opacity ${showGradient && !isTransitioning ? 'opacity-100' : 'opacity-0'} z-10`} />
+              </AnimatePresence>
             </div>
-            <div className="p-6 md:p-8 border-t border-slate-50 dark:border-slate-700 z-20 bg-white dark:bg-slate-800 flex-shrink-0 transition-colors duration-300">
-                <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    type="submit"
-                    disabled={hasGroupError}
-                    className={`w-full font-bold py-4 rounded-2xl shadow-lg transform flex items-center justify-center space-x-2 ${
-                        hasGroupError ? 'bg-slate-300 text-slate-500 shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25 dark:shadow-none'
-                    }`}
-                >
-                    <Play className="w-5 h-5 fill-current" />
-                    <span>Start</span>
-                </motion.button>
-            </div>
+            {isScrollable && !isTransitioning && (
+              <div className="absolute right-1 top-1 bottom-1 w-1.5 z-50">
+                <div
+                  ref={thumbRef}
+                  className="w-full bg-slate-300 dark:bg-slate-600 rounded-full"
+                  style={{ height: thumbHeight, position: "absolute", top: 0 }}
+                />
+              </div>
+            )}
+            <div
+              className={`absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none transition-opacity ${showGradient && !isTransitioning ? "opacity-100" : "opacity-0"} z-10`}
+            />
+          </div>
+          <div className="p-6 md:p-8 border-t border-slate-50 dark:border-slate-700 z-20 bg-white dark:bg-slate-800 flex-shrink-0 transition-colors duration-300">
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={hasGroupError}
+              className={`w-full font-bold py-4 rounded-2xl shadow-lg transform flex items-center justify-center space-x-2 ${
+                hasGroupError
+                  ? "bg-slate-300 text-slate-500 shadow-none"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25 dark:shadow-none"
+              }`}
+            >
+              <Play className="w-5 h-5 fill-current" />
+              <span>Start</span>
+            </motion.button>
+          </div>
         </form>
       </motion.div>
     </div>
