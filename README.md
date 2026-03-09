@@ -1,9 +1,8 @@
 ## How to run
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js and pnpm
 
 1. Install dependencies:
-   `npm install`
-3. Run the app:
-   `npm run dev`
+   `pnpm install`
+2. Run the app:
+   `pnpm dev`
